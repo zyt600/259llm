@@ -1,0 +1,26 @@
+# 太大
+unsloth/Qwen3-14B
+Qwen3-4B-Thinking-2507
+Qwen3-4B-Instruct-2507-FP8
+Qwen3-4B-Instruct-2507
+Qwen3-4B-Base
+
+# 太大，低分
+unsloth/gpt-oss-20b-gguf
+unsloth/gpt-oss-20b
+unsloth/Qwen3-30B-A3B-Thinking-2507-GGUF
+unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF
+unsloth/Qwen3-14B-GGUF
+
+# 低分
+unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF
+Llama-3.2-1B
+#unsloth/Phi-4-mini-reasoning-GGUF
+unsloth/Phi-4-mini-reasoning
+Llama-3.2-3B
+#unsloth/Qwen3-4B-Instruct-2507-GGUF
+
+# 稍微低分一点
+#Qwen3-1.7B-FP8
+#Qwen3-1.7B
+#Qwen3-1.7B-GPTQ-Int8

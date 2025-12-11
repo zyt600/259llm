@@ -1,0 +1,24 @@
+# 核心依赖
+torch>=2.0.0
+transformers>=4.36.0
+datasets>=2.16.0
+huggingface_hub>=0.20.0
+
+# SGLang推理引擎
+sglang[all]>=0.2.0
+
+# llama.cpp推理引擎 (用于GGUF模型)
+# 如需GPU支持，请使用: CMAKE_ARGS='-DGGML_CUDA=on' pip install llama-cpp-python --force-reinstall --no-cache-dir
+llama-cpp-python>=0.2.0
+
+# 评估指标
+rouge-score>=0.1.2
+nltk>=3.8.0
+numpy>=1.24.0
+evaluate>=0.4.0
+
+# 其他工具
+tqdm>=4.66.0
+accelerate>=0.25.0
+rich>=13.0.0
+

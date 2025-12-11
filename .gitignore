@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Model files and caches
+models_cache/
+hf_models/
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# llama.cpp (external dependency)
+llama.cpp/
+
+# Large result/output directories
+old_gguf_results/
+results/
+training/training_output*/
+training/merged_model/
+*.tar.gz
+
+# Misc
+.DS_Store
+Thumbs.db

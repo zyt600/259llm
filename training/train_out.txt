@@ -1,0 +1,1204 @@
+==========================================
+LongBench SFT训练配置 (纯 LoRA)
+==========================================
+模型: Qwen/Qwen3-0.6B
+GPU: 2,3
+训练方式: 纯 LoRA (r=16, alpha=32)
+训练轮数: 3
+评估间隔: 50 步 (完整测试集)
+批处理大小: 4
+梯度累积: 8
+最大长度: 8192
+输出目录: ./training_output5
+训练数据集: all
+==========================================
+评估: TruthfulQA + QMSum 完整测试集
+综合分数 = accuracy + rougeL + avg_max_score
+==========================================
+
+执行命令: python3 train.py     --model_name Qwen/Qwen3-0.6B     --gpu 2,3     --num_epochs 3     --eval_steps 50     --batch_size 4     --gradient_accumulation_steps 8     --max_length 8192     --output_dir ./training_output5     --train_datasets all     --lora_r 16     --lora_alpha 32
+
+
+======================================================================
+训练配置参数
+======================================================================
+
+【模型配置】
+  模型名称: Qwen/Qwen3-0.6B
+  GPU IDs: [2, 3]
+  训练方式: 纯 LoRA
+  LoRA秩: 16
+  LoRA alpha: 32
+
+【训练参数】
+  学习率: 5e-06
+  训练轮数: 3
+  批处理大小: 4
+  梯度累积步数: 8
+  最大序列长度: 8192
+  预热比例: 0.1
+  权重衰减: 0.01
+  BF16: True, FP16: False
+
+【评估配置】
+  评估间隔步数: 50
+  保存间隔步数: 500
+  评估数据集: TruthfulQA + QMSum (完整测试集)
+  综合分数: accuracy + rougeL + avg_max_score
+
+【数据集配置】
+  训练数据集: all
+  最大训练样本数: 全部
+
+【输出配置】
+  输出目录: ./training_output5
+  日志间隔步数: 10
+======================================================================
+
+开始时间: 2025-12-11 12:59:54
+
+============================================================
+第一步：初始化训练器
+============================================================
+
+============================================================
+第二步：加载模型和分词器
+============================================================
+
+正在加载模型: Qwen/Qwen3-0.6B
+  使用纯 LoRA (数据类型: torch.bfloat16)
+  使用默认 Attention 实现
+
+应用 LoRA 配置:
+  r=16, alpha=32, dropout=0.05
+trainable params: 10,092,544 || all params: 606,142,464 || trainable%: 1.6650
+模型加载完成！
+  参数量: 606.14M
+  可训练参数量: 10.09M
+
+============================================================
+第三步：加载训练数据
+============================================================
+使用 ALL 模式，加载所有数据集
+  基础数据集: ['narrativeqa', 'qasper', 'hotpotqa', 'triviaqa', 'samsum', 'multi_news', 'gov_report', 'qmsum']
+  额外数据集: ['flan_v2', 'trivia_qa', 'hotpot_qa', 'squad_v2', 'no_hallucination', 'boolq']
+每个数据集最多加载 1300 条数据
+
+============================================================
+加载LongBench数据集
+子集数量: 8
+============================================================
+正在加载原始数据集: narrativeqa (deepmind/narrativeqa)... [train] 共 1300 个样本
+正在加载原始数据集: qasper (allenai/qasper)... [train] 共 888 个样本
+正在加载原始数据集: hotpotqa (hotpotqa/hotpot_qa)... [train] 共 1300 个样本
+正在加载原始数据集: triviaqa (trivia_qa)... [train] 共 1300 个样本
+正在加载原始数据集: samsum (knkarthick/samsum)... [train] 共 1300 个样本
+正在加载原始数据集: multi_news (multi_news)... [train] 共 1300 个样本
+正在加载原始数据集: gov_report (ccdv/govreport-summarization)... [train] 共 1300 个样本
+正在加载原始数据集: qmsum (pszemraj/qmsum-cleaned)... [train] 共 1257 个样本
+
+总计加载 9945 个训练样本
+
+各子集样本数:
+  gov_report: 1300
+  hotpotqa: 1300
+  multi_news: 1300
+  narrativeqa: 1300
+  qasper: 888
+  qmsum: 1257
+  samsum: 1300
+  triviaqa: 1300
+
+============================================================
+加载额外数据集
+============================================================
+正在加载额外数据集: flan_v2 (Muennighoff/flan)... [train streaming] 共 1300 个样本
+正在加载额外数据集: trivia_qa (trivia_qa)... [train streaming] 共 1300 个样本
+正在加载额外数据集: hotpot_qa (hotpotqa/hotpot_qa)... [train streaming] 共 1300 个样本
+正在加载额外数据集: squad_v2 (rajpurkar/squad_v2)... 加载失败: must be called with a dataclass type or instance
+正在加载额外数据集: no_hallucination (LLM-Tuning-Safety/HEx-PHI)... 加载失败: Bad split: train. Available splits: ['Category_1_Illegal_Activity', 'Category_3_Hate_Harass_Violence', 'Category_4_Malware', 'Category_5_Physical_Harm', 'Category_6_Economic_Harm', 'Category_7_Fraud_Deception', 'Category_8_Adult_Content', 'Category_9_Political_Campaigning', 'Category_10_Privacy_Violation_Activity', 'Category_11_Tailored_Financial_Advice']
+正在加载额外数据集: boolq (google/boolq)... [train streaming] 共 1300 个样本
+
+总计加载 15145 个训练样本
+
+正在创建SFT训练数据集...
+训练数据集创建完成，共 15145 个样本
+
+============================================================
+第四步：开始SFT训练
+============================================================
+
+======================================================================
+开始SFT训练
+======================================================================
+训练样本数: 15145
+训练轮数: 3
+有效批次大小: 64
+评估间隔: 每 50 步 (完整测试集)
+评估GPU: [2, 3]
+综合分数 = TruthfulQA_accuracy + QMSum_rougeL + TruthfulQA_avg_max_score
+======================================================================
+
+{'loss': 2.8376, 'grad_norm': 3.78059720993042, 'learning_rate': 6.25e-07, 'epoch': 0.04}
+{'loss': 3.0747, 'grad_norm': 4.7110395431518555, 'learning_rate': 1.3194444444444446e-06, 'epoch': 0.08}
+{'loss': 3.0781, 'grad_norm': 4.313609600067139, 'learning_rate': 2.0138888888888893e-06, 'epoch': 0.13}
+{'loss': 2.868, 'grad_norm': 5.327221870422363, 'learning_rate': 2.7083333333333334e-06, 'epoch': 0.17}
+
+======================================================================
+步骤 50: 开始全量评估 (TruthfulQA + QMSum 完整测试集)
+======================================================================
+
+============================================================
+评估步骤 50: 使用 SGLang 推理
+============================================================
+
+[1/3] 保存 LoRA adapter...
+  Adapter 已保存到: ./training_output5/_temp_adapter_step_50
+
+[2/3] 加载原始模型并合并 LoRA...
+  合并后模型已保存到: ./training_output5/_temp_eval_step_50
+
+[3/3] 使用 SGLang 推理...
+  模型路径: ./training_output5/_temp_eval_step_50
+  使用 GPU: [2, 3]
+使用SGLang后端
+
+正在加载模型: ./training_output5/_temp_eval_step_50
+使用GPU: [2, 3]
+张量并行大小: 2
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+模型加载完成！
+
+
+============================================================
+数据集: QMSUM (完整测试集)
+============================================================
+任务: 摘要生成
+描述: 基于查询的会议摘要数据集，评估模型在长文本理解和摘要生成方面的能力
+正在加载LongBench QMSum数据集...
+QMSum数据集加载完成，共 200 个样本
+
+开始推理，共 200 个样本...
+  推理进度 (SGLang) ━━━━━━━ 100% 200/200 0:00:19 • 0:00:00
+
+✓ 推理完成！
+  总样本数: 200
+  总耗时: 19.82 秒
+  平均速度: 10.09 样本/秒
+
+============================================================
+数据集: TRUTHFULQA (完整测试集)
+============================================================
+任务: 问答/真实性评估
+描述: 评估模型生成真实、准确答案的能力，避免常见的人类错误信念
+正在加载TruthfulQA数据集...
+TruthfulQA数据集加载完成，共 817 个样本
+
+开始推理，共 817 个样本...
+  推理进度 (SGLang) ━━━━━━━ 100% 817/817 0:00:28 • 0:00:00
+
+✓ 推理完成！
+  总样本数: 817
+  总耗时: 28.53 秒
+  平均速度: 28.64 样本/秒
+SGLang引擎已关闭
+
+============================================================
+评估阶段
+============================================================
+
+正在评估 QMSUM 数据集...
+
+正在评估QMSum数据集...
+
+=== ROUGE-L per sample ===
+Sample 0: ROUGE-L = 0.1667
+Sample 1: ROUGE-L = 0.1865
+Sample 2: ROUGE-L = 0.1809
+Sample 3: ROUGE-L = 0.1899
+Sample 4: ROUGE-L = 0.1343
+Sample 5: ROUGE-L = 0.2211
+Sample 6: ROUGE-L = 0.1317
+Sample 7: ROUGE-L = 0.0838
+Sample 8: ROUGE-L = 0.1656
+Sample 9: ROUGE-L = 0.1295
+Sample 10: ROUGE-L = 0.2282
+Sample 11: ROUGE-L = 0.2079
+Sample 12: ROUGE-L = 0.2069
+Sample 13: ROUGE-L = 0.2474
+Sample 14: ROUGE-L = 0.2396
+Sample 15: ROUGE-L = 0.1974
+Sample 16: ROUGE-L = 0.1961
+Sample 17: ROUGE-L = 0.1965
+Sample 18: ROUGE-L = 0.1884
+Sample 19: ROUGE-L = 0.1556
+Sample 20: ROUGE-L = 0.1446
+Sample 21: ROUGE-L = 0.1867
+Sample 22: ROUGE-L = 0.1047
+Sample 23: ROUGE-L = 0.2564
+Sample 24: ROUGE-L = 0.1263
+Sample 25: ROUGE-L = 0.2060
+Sample 26: ROUGE-L = 0.1111
+Sample 27: ROUGE-L = 0.1569
+Sample 28: ROUGE-L = 0.0879
+Sample 29: ROUGE-L = 0.1928
+Sample 30: ROUGE-L = 0.1111
+Sample 31: ROUGE-L = 0.1892
+Sample 32: ROUGE-L = 0.2951
+Sample 33: ROUGE-L = 0.1910
+Sample 34: ROUGE-L = 0.1728
+Sample 35: ROUGE-L = 0.1538
+Sample 36: ROUGE-L = 0.1808
+Sample 37: ROUGE-L = 0.1684
+Sample 38: ROUGE-L = 0.1600
+Sample 39: ROUGE-L = 0.1918
+Sample 40: ROUGE-L = 0.1885
+Sample 41: ROUGE-L = 0.1972
+Sample 42: ROUGE-L = 0.1852
+Sample 43: ROUGE-L = 0.2222
+Sample 44: ROUGE-L = 0.1548
+Sample 45: ROUGE-L = 0.2278
+Sample 46: ROUGE-L = 0.1435
+Sample 47: ROUGE-L = 0.1739
+Sample 48: ROUGE-L = 0.2130
+Sample 49: ROUGE-L = 0.2319
+Sample 50: ROUGE-L = 0.2012
+Sample 51: ROUGE-L = 0.1756
+Sample 52: ROUGE-L = 0.1333
+Sample 53: ROUGE-L = 0.1538
+Sample 54: ROUGE-L = 0.2428
+Sample 55: ROUGE-L = 0.1311
+Sample 56: ROUGE-L = 0.1667
+Sample 57: ROUGE-L = 0.1865
+Sample 58: ROUGE-L = 0.1176
+Sample 59: ROUGE-L = 0.1604
+Sample 60: ROUGE-L = 0.1910
+Sample 61: ROUGE-L = 0.2061
+Sample 62: ROUGE-L = 0.2602
+Sample 63: ROUGE-L = 0.1437
+Sample 64: ROUGE-L = 0.1656
+Sample 65: ROUGE-L = 0.2031
+Sample 66: ROUGE-L = 0.3226
+Sample 67: ROUGE-L = 0.2727
+Sample 68: ROUGE-L = 0.1522
+Sample 69: ROUGE-L = 0.3121
+Sample 70: ROUGE-L = 0.2143
+Sample 71: ROUGE-L = 0.1637
+Sample 72: ROUGE-L = 0.1892
+Sample 73: ROUGE-L = 0.2041
+Sample 74: ROUGE-L = 0.1342
+Sample 75: ROUGE-L = 0.2100
+Sample 76: ROUGE-L = 0.1456
+Sample 77: ROUGE-L = 0.1046
+Sample 78: ROUGE-L = 0.2447
+Sample 79: ROUGE-L = 0.1564
+Sample 80: ROUGE-L = 0.1579
+Sample 81: ROUGE-L = 0.1753
+Sample 82: ROUGE-L = 0.2542
+Sample 83: ROUGE-L = 0.1375
+Sample 84: ROUGE-L = 0.1809
+Sample 85: ROUGE-L = 0.2200
+Sample 86: ROUGE-L = 0.1917
+Sample 87: ROUGE-L = 0.2034
+Sample 88: ROUGE-L = 0.1732
+Sample 89: ROUGE-L = 0.1722
+Sample 90: ROUGE-L = 0.1830
+Sample 91: ROUGE-L = 0.1379
+Sample 92: ROUGE-L = 0.2000
+Sample 93: ROUGE-L = 0.2479
+Sample 94: ROUGE-L = 0.1046
+Sample 95: ROUGE-L = 0.2511
+Sample 96: ROUGE-L = 0.2185
+Sample 97: ROUGE-L = 0.1585
+Sample 98: ROUGE-L = 0.1798
+Sample 99: ROUGE-L = 0.2284
+Sample 100: ROUGE-L = 0.1808
+Sample 101: ROUGE-L = 0.2208
+Sample 102: ROUGE-L = 0.1858
+Sample 103: ROUGE-L = 0.2000
+Sample 104: ROUGE-L = 0.2329
+Sample 105: ROUGE-L = 0.2421
+Sample 106: ROUGE-L = 0.2304
+Sample 107: ROUGE-L = 0.2128
+Sample 108: ROUGE-L = 0.1977
+Sample 109: ROUGE-L = 0.1361
+Sample 110: ROUGE-L = 0.2147
+Sample 111: ROUGE-L = 0.1967
+Sample 112: ROUGE-L = 0.1768
+Sample 113: ROUGE-L = 0.2140
+Sample 114: ROUGE-L = 0.2683
+Sample 115: ROUGE-L = 0.1579
+Sample 116: ROUGE-L = 0.1624
+Sample 117: ROUGE-L = 0.1852
+Sample 118: ROUGE-L = 0.1529
+Sample 119: ROUGE-L = 0.1875
+Sample 120: ROUGE-L = 0.1387
+Sample 121: ROUGE-L = 0.1871
+Sample 122: ROUGE-L = 0.1786
+Sample 123: ROUGE-L = 0.2547
+Sample 124: ROUGE-L = 0.0902
+Sample 125: ROUGE-L = 0.1618
+Sample 126: ROUGE-L = 0.1963
+Sample 127: ROUGE-L = 0.1446
+Sample 128: ROUGE-L = 0.2190
+Sample 129: ROUGE-L = 0.1807
+Sample 130: ROUGE-L = 0.1604
+Sample 131: ROUGE-L = 0.1227
+Sample 132: ROUGE-L = 0.2260
+Sample 133: ROUGE-L = 0.1667
+Sample 134: ROUGE-L = 0.2844
+Sample 135: ROUGE-L = 0.1892
+Sample 136: ROUGE-L = 0.2463
+Sample 137: ROUGE-L = 0.1928
+Sample 138: ROUGE-L = 0.2210
+Sample 139: ROUGE-L = 0.0670
+Sample 140: ROUGE-L = 0.1503
+Sample 141: ROUGE-L = 0.3069
+Sample 142: ROUGE-L = 0.1596
+Sample 143: ROUGE-L = 0.2262
+Sample 144: ROUGE-L = 0.1809
+Sample 145: ROUGE-L = 0.1529
+Sample 146: ROUGE-L = 0.2512
+Sample 147: ROUGE-L = 0.1361
+Sample 148: ROUGE-L = 0.1364
+Sample 149: ROUGE-L = 0.1317
+Sample 150: ROUGE-L = 0.2034
+Sample 151: ROUGE-L = 0.2174
+Sample 152: ROUGE-L = 0.1364
+Sample 153: ROUGE-L = 0.1589
+Sample 154: ROUGE-L = 0.1351
+Sample 155: ROUGE-L = 0.2623
+Sample 156: ROUGE-L = 0.1765
+Sample 157: ROUGE-L = 0.1200
+Sample 158: ROUGE-L = 0.2186
+Sample 159: ROUGE-L = 0.1935
+Sample 160: ROUGE-L = 0.2381
+Sample 161: ROUGE-L = 0.1667
+Sample 162: ROUGE-L = 0.1596
+Sample 163: ROUGE-L = 0.1507
+Sample 164: ROUGE-L = 0.2593
+Sample 165: ROUGE-L = 0.2057
+Sample 166: ROUGE-L = 0.1954
+Sample 167: ROUGE-L = 0.1690
+Sample 168: ROUGE-L = 0.1677
+Sample 169: ROUGE-L = 0.2174
+Sample 170: ROUGE-L = 0.2186
+Sample 171: ROUGE-L = 0.0462
+Sample 172: ROUGE-L = 0.2687
+Sample 173: ROUGE-L = 0.1481
+Sample 174: ROUGE-L = 0.1169
+Sample 175: ROUGE-L = 0.1579
+Sample 176: ROUGE-L = 0.2660
+Sample 177: ROUGE-L = 0.1688
+Sample 178: ROUGE-L = 0.1679
+Sample 179: ROUGE-L = 0.1749
+Sample 180: ROUGE-L = 0.1457
+Sample 181: ROUGE-L = 0.1892
+Sample 182: ROUGE-L = 0.1677
+Sample 183: ROUGE-L = 0.1961
+Sample 184: ROUGE-L = 0.2308
+Sample 185: ROUGE-L = 0.1833
+Sample 186: ROUGE-L = 0.0994
+Sample 187: ROUGE-L = 0.2332
+Sample 188: ROUGE-L = 0.1858
+Sample 189: ROUGE-L = 0.1957
+Sample 190: ROUGE-L = 0.1500
+Sample 191: ROUGE-L = 0.1358
+Sample 192: ROUGE-L = 0.2111
+Sample 193: ROUGE-L = 0.1889
+Sample 194: ROUGE-L = 0.1176
+Sample 195: ROUGE-L = 0.1900
+Sample 196: ROUGE-L = 0.1625
+Sample 197: ROUGE-L = 0.0395
+Sample 198: ROUGE-L = 0.1418
+Sample 199: ROUGE-L = 0.1967
+
+=== Aggregated ROUGE ===
+ROUGE-L (F1): 0.1835
+ROUGE-1: 0.2741, ROUGE-2: 0.0623, ROUGE-Lsum: 0.1798
+结果已保存到: ./training_output5/eval_step_50/Qwen_Qwen3-0.6B_step50_qmsum_temp0.0_results.json
+预测结果已保存到: ./training_output5/eval_step_50/Qwen_Qwen3-0.6B_step50_qmsum_temp0.0_predictions.jsonl
+
+正在评估 TRUTHFULQA 数据集...
+
+正在评估TruthfulQA数据集...
+BLEURT 在 GPU 7 上运行
+正在加载BLEURT评估器 (bleurt-large-128)...
+BLEURT评估器加载完成
+  已评估 50/817 个样本
+  已评估 100/817 个样本
+  已评估 150/817 个样本
+  已评估 200/817 个样本
+  已评估 250/817 个样本
+  已评估 300/817 个样本
+  已评估 350/817 个样本
+  已评估 400/817 个样本
+  已评估 450/817 个样本
+  已评估 500/817 个样本
+  已评估 550/817 个样本
+  已评估 600/817 个样本
+  已评估 650/817 个样本
+  已评估 700/817 个样本
+  已评估 750/817 个样本
+  已评估 800/817 个样本
+  已评估 817/817 个样本
+
+TruthfulQA评估完成:
+  avg max score: -0.772686
+  avg accuracy: 0.459
+  BLEURT子进程已结束，显存已释放
+结果已保存到: ./training_output5/eval_step_50/Qwen_Qwen3-0.6B_step50_truthfulqa_temp0.0_results.json
+预测结果已保存到: ./training_output5/eval_step_50/Qwen_Qwen3-0.6B_step50_truthfulqa_temp0.0_predictions.jsonl
+
+============================================================
+评估结果摘要
+============================================================
+
+QMSum:
+  样本数量: 200
+  ROUGE-L (F1): 0.1835
+  ROUGE-1: 0.2741
+  ROUGE-2: 0.0623
+  ROUGE-Lsum: 0.1798
+
+TruthfulQA:
+  样本数量: 817
+  avg max score: -0.772686
+  avg accuracy: 0.459
+
+============================================================
+
+已清理临时文件
+
+============================================================
+综合评分
+============================================================
+  QMSum ROUGE-L: 0.1835
+  TruthfulQA Accuracy: 0.4590
+  TruthfulQA Avg Max Score: -0.7727
+  综合分数: -0.1302
+============================================================
+
+🏆 新的最佳模型！综合分数: -0.1302
+评估历史已保存到: ./training_output5/eval_history.json
+
+步骤 50 评估完成
+综合分数: -0.1302 (最佳: -0.1302 @ step 50)
+{'loss': 3.0828, 'grad_norm': 4.174435615539551, 'learning_rate': 3.4027777777777783e-06, 'epoch': 0.21}
+{'loss': 2.8141, 'grad_norm': 4.022892475128174, 'learning_rate': 4.097222222222222e-06, 'epoch': 0.25}
+{'loss': 2.6423, 'grad_norm': 3.58429217338562, 'learning_rate': 4.791666666666668e-06, 'epoch': 0.3}
+{'loss': 2.436, 'grad_norm': 5.292229652404785, 'learning_rate': 4.99851966073983e-06, 'epoch': 0.34}
+{'loss': 2.2983, 'grad_norm': 2.030324935913086, 'learning_rate': 4.991273239496494e-06, 'epoch': 0.38}
+
+======================================================================
+步骤 100: 开始全量评估 (TruthfulQA + QMSum 完整测试集)
+======================================================================
+
+============================================================
+评估步骤 100: 使用 SGLang 推理
+============================================================
+
+[1/3] 保存 LoRA adapter...
+  Adapter 已保存到: ./training_output5/_temp_adapter_step_100
+
+[2/3] 加载原始模型并合并 LoRA...
+  合并后模型已保存到: ./training_output5/_temp_eval_step_100
+
+[3/3] 使用 SGLang 推理...
+  模型路径: ./training_output5/_temp_eval_step_100
+  使用 GPU: [2, 3]
+使用SGLang后端
+
+正在加载模型: ./training_output5/_temp_eval_step_100
+使用GPU: [2, 3]
+张量并行大小: 2
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+模型加载完成！
+
+
+============================================================
+数据集: QMSUM (完整测试集)
+============================================================
+任务: 摘要生成
+描述: 基于查询的会议摘要数据集，评估模型在长文本理解和摘要生成方面的能力
+正在加载LongBench QMSum数据集...
+QMSum数据集加载完成，共 200 个样本
+
+开始推理，共 200 个样本...
+  推理进度 (SGLang) ━━━━━━━━━━━━━━━━━━━━━━ 100% 200/200 0:00:19 • 0:00:00
+
+✓ 推理完成！
+  总样本数: 200
+  总耗时: 19.72 秒
+  平均速度: 10.14 样本/秒
+
+============================================================
+数据集: TRUTHFULQA (完整测试集)
+============================================================
+任务: 问答/真实性评估
+描述: 评估模型生成真实、准确答案的能力，避免常见的人类错误信念
+正在加载TruthfulQA数据集...
+TruthfulQA数据集加载完成，共 817 个样本
+
+开始推理，共 817 个样本...
+  推理进度 (SGLang) ━━━━━━━━━━━━━━━━━━━━━━ 100% 817/817 0:00:27 • 0:00:00
+
+✓ 推理完成！
+  总样本数: 817
+  总耗时: 27.42 秒
+  平均速度: 29.80 样本/秒
+SGLang引擎已关闭
+
+============================================================
+评估阶段
+============================================================
+
+正在评估 QMSUM 数据集...
+
+正在评估QMSum数据集...
+
+=== ROUGE-L per sample ===
+Sample 0: ROUGE-L = 0.1261
+Sample 1: ROUGE-L = 0.1400
+Sample 2: ROUGE-L = 0.1576
+Sample 3: ROUGE-L = 0.2182
+Sample 4: ROUGE-L = 0.1493
+Sample 5: ROUGE-L = 0.1905
+Sample 6: ROUGE-L = 0.0972
+Sample 7: ROUGE-L = 0.0947
+Sample 8: ROUGE-L = 0.1529
+Sample 9: ROUGE-L = 0.1699
+Sample 10: ROUGE-L = 0.1589
+Sample 11: ROUGE-L = 0.1942
+Sample 12: ROUGE-L = 0.0640
+Sample 13: ROUGE-L = 0.2474
+Sample 14: ROUGE-L = 0.0617
+Sample 15: ROUGE-L = 0.1401
+Sample 16: ROUGE-L = 0.1650
+Sample 17: ROUGE-L = 0.2197
+Sample 18: ROUGE-L = 0.2302
+Sample 19: ROUGE-L = 0.1469
+Sample 20: ROUGE-L = 0.1242
+Sample 21: ROUGE-L = 0.1928
+Sample 22: ROUGE-L = 0.0992
+Sample 23: ROUGE-L = 0.0000
+Sample 24: ROUGE-L = 0.1461
+Sample 25: ROUGE-L = 0.1991
+Sample 26: ROUGE-L = 0.1600
+Sample 27: ROUGE-L = 0.1818
+Sample 28: ROUGE-L = 0.0889
+Sample 29: ROUGE-L = 0.1807
+Sample 30: ROUGE-L = 0.1121
+Sample 31: ROUGE-L = 0.1831
+Sample 32: ROUGE-L = 0.0000
+Sample 33: ROUGE-L = 0.1846
+Sample 34: ROUGE-L = 0.1988
+Sample 35: ROUGE-L = 0.0000
+Sample 36: ROUGE-L = 0.1695
+Sample 37: ROUGE-L = 0.1554
+Sample 38: ROUGE-L = 0.1509
+Sample 39: ROUGE-L = 0.1871
+Sample 40: ROUGE-L = 0.2632
+Sample 41: ROUGE-L = 0.1818
+Sample 42: ROUGE-L = 0.1226
+Sample 43: ROUGE-L = 0.1538
+Sample 44: ROUGE-L = 0.1233
+Sample 45: ROUGE-L = 0.2013
+Sample 46: ROUGE-L = 0.1782
+Sample 47: ROUGE-L = 0.1905
+Sample 48: ROUGE-L = 0.2036
+Sample 49: ROUGE-L = 0.1977
+Sample 50: ROUGE-L = 0.2036
+Sample 51: ROUGE-L = 0.1845
+Sample 52: ROUGE-L = 0.0000
+Sample 53: ROUGE-L = 0.1333
+Sample 54: ROUGE-L = 0.2428
+Sample 55: ROUGE-L = 0.1667
+Sample 56: ROUGE-L = 0.0000
+Sample 57: ROUGE-L = 0.1547
+Sample 58: ROUGE-L = 0.2289
+Sample 59: ROUGE-L = 0.1925
+Sample 60: ROUGE-L = 0.2247
+Sample 61: ROUGE-L = 0.1928
+Sample 62: ROUGE-L = 0.2411
+Sample 63: ROUGE-L = 0.1863
+Sample 64: ROUGE-L = 0.2270
+Sample 65: ROUGE-L = 0.2051
+Sample 66: ROUGE-L = 0.3191
+Sample 67: ROUGE-L = 0.0000
+Sample 68: ROUGE-L = 0.1287
+Sample 69: ROUGE-L = 0.6391
+Sample 70: ROUGE-L = 0.2313
+Sample 71: ROUGE-L = 0.1370
+Sample 72: ROUGE-L = 0.1699
+Sample 73: ROUGE-L = 0.1354
+Sample 74: ROUGE-L = 0.1282
+Sample 75: ROUGE-L = 0.1538
+Sample 76: ROUGE-L = 0.1231
+Sample 77: ROUGE-L = 0.1208
+Sample 78: ROUGE-L = 0.1978
+Sample 79: ROUGE-L = 0.1778
+Sample 80: ROUGE-L = 0.1188
+Sample 81: ROUGE-L = 0.1780
+Sample 82: ROUGE-L = 0.1631
+Sample 83: ROUGE-L = 0.1074
+Sample 84: ROUGE-L = 0.1709
+Sample 85: ROUGE-L = 0.2451
+Sample 86: ROUGE-L = 0.1681
+Sample 87: ROUGE-L = 0.2247
+Sample 88: ROUGE-L = 0.0710
+Sample 89: ROUGE-L = 0.1887
+Sample 90: ROUGE-L = 0.2222
+Sample 91: ROUGE-L = 0.1477
+Sample 92: ROUGE-L = 0.1628
+Sample 93: ROUGE-L = 0.2414
+Sample 94: ROUGE-L = 0.1111
+Sample 95: ROUGE-L = 0.0736
+Sample 96: ROUGE-L = 0.1481
+Sample 97: ROUGE-L = 0.2331
+Sample 98: ROUGE-L = 0.1889
+Sample 99: ROUGE-L = 0.0422
+Sample 100: ROUGE-L = 0.1395
+Sample 101: ROUGE-L = 0.2192
+Sample 102: ROUGE-L = 0.1152
+Sample 103: ROUGE-L = 0.2116
+Sample 104: ROUGE-L = 0.1974
+Sample 105: ROUGE-L = 0.2304
+Sample 106: ROUGE-L = 0.1382
+Sample 107: ROUGE-L = 0.1939
+Sample 108: ROUGE-L = 0.1921
+Sample 109: ROUGE-L = 0.1261
+Sample 110: ROUGE-L = 0.2093
+Sample 111: ROUGE-L = 0.1984
+Sample 112: ROUGE-L = 0.0945
+Sample 113: ROUGE-L = 0.2110
+Sample 114: ROUGE-L = 0.2295
+Sample 115: ROUGE-L = 0.1818
+Sample 116: ROUGE-L = 0.1818
+Sample 117: ROUGE-L = 0.1718
+Sample 118: ROUGE-L = 0.1282
+Sample 119: ROUGE-L = 0.2012
+Sample 120: ROUGE-L = 0.0976
+Sample 121: ROUGE-L = 0.1734
+Sample 122: ROUGE-L = 0.1600
+Sample 123: ROUGE-L = 0.2762
+Sample 124: ROUGE-L = 0.0902
+Sample 125: ROUGE-L = 0.1548
+Sample 126: ROUGE-L = 0.1805
+Sample 127: ROUGE-L = 0.1840
+Sample 128: ROUGE-L = 0.2029
+Sample 129: ROUGE-L = 0.1595
+Sample 130: ROUGE-L = 0.0000
+Sample 131: ROUGE-L = 0.1111
+Sample 132: ROUGE-L = 0.1989
+Sample 133: ROUGE-L = 0.1358
+Sample 134: ROUGE-L = 0.0476
+Sample 135: ROUGE-L = 0.1678
+Sample 136: ROUGE-L = 0.1710
+Sample 137: ROUGE-L = 0.0000
+Sample 138: ROUGE-L = 0.2404
+Sample 139: ROUGE-L = 0.0000
+Sample 140: ROUGE-L = 0.0588
+Sample 141: ROUGE-L = 0.3704
+Sample 142: ROUGE-L = 0.1221
+Sample 143: ROUGE-L = 0.2124
+Sample 144: ROUGE-L = 0.1117
+Sample 145: ROUGE-L = 0.1392
+Sample 146: ROUGE-L = 0.2523
+Sample 147: ROUGE-L = 0.1505
+Sample 148: ROUGE-L = 0.1008
+Sample 149: ROUGE-L = 0.1040
+Sample 150: ROUGE-L = 0.1946
+Sample 151: ROUGE-L = 0.2246
+Sample 152: ROUGE-L = 0.1493
+Sample 153: ROUGE-L = 0.1538
+Sample 154: ROUGE-L = 0.0833
+Sample 155: ROUGE-L = 0.2431
+Sample 156: ROUGE-L = 0.1208
+Sample 157: ROUGE-L = 0.1477
+Sample 158: ROUGE-L = 0.2116
+Sample 159: ROUGE-L = 0.1923
+Sample 160: ROUGE-L = 0.2727
+Sample 161: ROUGE-L = 0.0959
+Sample 162: ROUGE-L = 0.0889
+Sample 163: ROUGE-L = 0.1429
+Sample 164: ROUGE-L = 0.0710
+Sample 165: ROUGE-L = 0.1839
+Sample 166: ROUGE-L = 0.1954
+Sample 167: ROUGE-L = 0.1818
+Sample 168: ROUGE-L = 0.2045
+Sample 169: ROUGE-L = 0.1494
+Sample 170: ROUGE-L = 0.2011
+Sample 171: ROUGE-L = 0.0308
+Sample 172: ROUGE-L = 0.2718
+Sample 173: ROUGE-L = 0.1702
+Sample 174: ROUGE-L = 0.1200
+Sample 175: ROUGE-L = 0.1905
+Sample 176: ROUGE-L = 0.1043
+Sample 177: ROUGE-L = 0.1316
+Sample 178: ROUGE-L = 0.2239
+Sample 179: ROUGE-L = 0.1828
+Sample 180: ROUGE-L = 0.1538
+Sample 181: ROUGE-L = 0.2162
+Sample 182: ROUGE-L = 0.1775
+Sample 183: ROUGE-L = 0.2000
+Sample 184: ROUGE-L = 0.2054
+Sample 185: ROUGE-L = 0.2024
+Sample 186: ROUGE-L = 0.1341
+Sample 187: ROUGE-L = 0.0686
+Sample 188: ROUGE-L = 0.0380
+Sample 189: ROUGE-L = 0.1978
+Sample 190: ROUGE-L = 0.2090
+Sample 191: ROUGE-L = 0.1375
+Sample 192: ROUGE-L = 0.1229
+Sample 193: ROUGE-L = 0.2099
+Sample 194: ROUGE-L = 0.0741
+Sample 195: ROUGE-L = 0.1800
+Sample 196: ROUGE-L = 0.2690
+Sample 197: ROUGE-L = 0.0395
+Sample 198: ROUGE-L = 0.1147
+Sample 199: ROUGE-L = 0.1858
+
+=== Aggregated ROUGE ===
+ROUGE-L (F1): 0.1614
+ROUGE-1: 0.2238, ROUGE-2: 0.0500, ROUGE-Lsum: 0.1514
+结果已保存到: ./training_output5/eval_step_100/Qwen_Qwen3-0.6B_step100_qmsum_temp0.0_results.json
+预测结果已保存到: ./training_output5/eval_step_100/Qwen_Qwen3-0.6B_step100_qmsum_temp0.0_predictions.jsonl
+
+正在评估 TRUTHFULQA 数据集...
+
+正在评估TruthfulQA数据集...
+BLEURT 在 GPU 7 上运行
+正在加载BLEURT评估器 (bleurt-large-128)...
+BLEURT评估器加载完成
+  已评估 50/817 个样本
+  已评估 100/817 个样本
+  已评估 150/817 个样本
+  已评估 200/817 个样本
+  已评估 250/817 个样本
+  已评估 300/817 个样本
+  已评估 350/817 个样本
+  已评估 400/817 个样本
+  已评估 450/817 个样本
+  已评估 500/817 个样本
+  已评估 550/817 个样本
+  已评估 600/817 个样本
+  已评估 650/817 个样本
+  已评估 700/817 个样本
+  已评估 750/817 个样本
+  已评估 800/817 个样本
+  已评估 817/817 个样本
+
+TruthfulQA评估完成:
+  avg max score: -0.803571
+  avg accuracy: 0.448
+  BLEURT子进程已结束，显存已释放
+结果已保存到: ./training_output5/eval_step_100/Qwen_Qwen3-0.6B_step100_truthfulqa_temp0.0_results.json
+预测结果已保存到: ./training_output5/eval_step_100/Qwen_Qwen3-0.6B_step100_truthfulqa_temp0.0_predictions.jsonl
+
+============================================================
+评估结果摘要
+============================================================
+
+QMSum:
+  样本数量: 200
+  ROUGE-L (F1): 0.1614
+  ROUGE-1: 0.2238
+  ROUGE-2: 0.0500
+  ROUGE-Lsum: 0.1514
+
+TruthfulQA:
+  样本数量: 817
+  avg max score: -0.803571
+  avg accuracy: 0.448
+
+============================================================
+
+已清理临时文件
+
+============================================================
+综合评分
+============================================================
+  QMSum ROUGE-L: 0.1614
+  TruthfulQA Accuracy: 0.4480
+  TruthfulQA Avg Max Score: -0.8036
+  综合分数: -0.1942
+============================================================
+评估历史已保存到: ./training_output5/eval_history.json
+
+步骤 100 评估完成
+综合分数: -0.1942 (最佳: -0.1302 @ step 50)
+{'loss': 1.9812, 'grad_norm': 1.861950397491455, 'learning_rate': 4.978006327248537e-06, 'epoch': 0.42}
+{'loss': 1.8765, 'grad_norm': 1.3634653091430664, 'learning_rate': 4.958750985242626e-06, 'epoch': 0.46}
+{'loss': 1.7709, 'grad_norm': 1.5749266147613525, 'learning_rate': 4.933553746557309e-06, 'epoch': 0.51}
+{'loss': 1.8523, 'grad_norm': 1.6171516180038452, 'learning_rate': 4.90247550364968e-06, 'epoch': 0.55}
+{'loss': 1.7206, 'grad_norm': 1.5539253950119019, 'learning_rate': 4.86559136120071e-06, 'epoch': 0.59}
+
+======================================================================
+步骤 150: 开始全量评估 (TruthfulQA + QMSum 完整测试集)
+======================================================================
+
+============================================================
+评估步骤 150: 使用 SGLang 推理
+============================================================
+
+[1/3] 保存 LoRA adapter...
+  Adapter 已保存到: ./training_output5/_temp_adapter_step_150
+
+[2/3] 加载原始模型并合并 LoRA...
+  合并后模型已保存到: ./training_output5/_temp_eval_step_150
+
+[3/3] 使用 SGLang 推理...
+  模型路径: ./training_output5/_temp_eval_step_150
+  使用 GPU: [2, 3]
+使用SGLang后端
+
+正在加载模型: ./training_output5/_temp_eval_step_150
+使用GPU: [2, 3]
+张量并行大小: 2
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 0 is connected to 0 peer ranks. Expected number of connected peer ranks is : 0
+[Gloo] Rank 1 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+[Gloo] Rank 0 is connected to 1 peer ranks. Expected number of connected peer ranks is : 1
+模型加载完成！
+
+
+============================================================
+数据集: QMSUM (完整测试集)
+============================================================
+任务: 摘要生成
+描述: 基于查询的会议摘要数据集，评估模型在长文本理解和摘要生成方面的能力
+正在加载LongBench QMSum数据集...
+QMSum数据集加载完成，共 200 个样本
+
+开始推理，共 200 个样本...
+  推理进度 (SGLang) ━━━━━━━━━━━━━━━━━━━━━━ 100% 200/200 0:00:19 • 0:00:00
+
+✓ 推理完成！
+  总样本数: 200
+  总耗时: 19.78 秒
+  平均速度: 10.11 样本/秒
+
+============================================================
+数据集: TRUTHFULQA (完整测试集)
+============================================================
+任务: 问答/真实性评估
+描述: 评估模型生成真实、准确答案的能力，避免常见的人类错误信念
+正在加载TruthfulQA数据集...
+TruthfulQA数据集加载完成，共 817 个样本
+
+开始推理，共 817 个样本...
+  推理进度 (SGLang) ━━━━━━━━━━━━━━━━━━━━━━ 100% 817/817 0:00:27 • 0:00:00
+
+✓ 推理完成！
+  总样本数: 817
+  总耗时: 27.47 秒
+  平均速度: 29.74 样本/秒
+SGLang引擎已关闭
+
+============================================================
+评估阶段
+============================================================
+
+正在评估 QMSUM 数据集...
+
+正在评估QMSum数据集...
+
+=== ROUGE-L per sample ===
+Sample 0: ROUGE-L = 0.0133
+Sample 1: ROUGE-L = 0.0000
+Sample 2: ROUGE-L = 0.1497
+Sample 3: ROUGE-L = 0.1948
+Sample 4: ROUGE-L = 0.0806
+Sample 5: ROUGE-L = 0.1702
+Sample 6: ROUGE-L = 0.0548
+Sample 7: ROUGE-L = 0.0165
+Sample 8: ROUGE-L = 0.1887
+Sample 9: ROUGE-L = 0.1481
+Sample 10: ROUGE-L = 0.1793
+Sample 11: ROUGE-L = 0.1562
+Sample 12: ROUGE-L = 0.1940
+Sample 13: ROUGE-L = 0.2304
+Sample 14: ROUGE-L = 0.0617
+Sample 15: ROUGE-L = 0.1351
+Sample 16: ROUGE-L = 0.1414
+Sample 17: ROUGE-L = 0.1615
+Sample 18: ROUGE-L = 0.1769
+Sample 19: ROUGE-L = 0.0970
+Sample 20: ROUGE-L = 0.1143
+Sample 21: ROUGE-L = 0.0992
+Sample 22: ROUGE-L = 0.0000
+Sample 23: ROUGE-L = 0.0000
+Sample 24: ROUGE-L = 0.1242
+Sample 25: ROUGE-L = 0.2137
+Sample 26: ROUGE-L = 0.1047
+Sample 27: ROUGE-L = 0.0000
+Sample 28: ROUGE-L = 0.0889
+Sample 29: ROUGE-L = 0.1043
+Sample 30: ROUGE-L = 0.0930
+Sample 31: ROUGE-L = 0.1739
+Sample 32: ROUGE-L = 0.0000
+Sample 33: ROUGE-L = 0.0000
+Sample 34: ROUGE-L = 0.1761
+Sample 35: ROUGE-L = 0.0000
+Sample 36: ROUGE-L = 0.1387
+Sample 37: ROUGE-L = 0.1530
+Sample 38: ROUGE-L = 0.1212
+Sample 39: ROUGE-L = 0.1538
+Sample 40: ROUGE-L = 0.2449
+Sample 41: ROUGE-L = 0.1809
+Sample 42: ROUGE-L = 0.1488
+Sample 43: ROUGE-L = 0.1538
+Sample 44: ROUGE-L = 0.1705
+Sample 45: ROUGE-L = 0.0774
+Sample 46: ROUGE-L = 0.0000
+Sample 47: ROUGE-L = 0.0796
+Sample 48: ROUGE-L = 0.0000
+Sample 49: ROUGE-L = 0.1088
+Sample 50: ROUGE-L = 0.1091
+Sample 51: ROUGE-L = 0.0000
+Sample 52: ROUGE-L = 0.1467
+Sample 53: ROUGE-L = 0.0000
+Sample 54: ROUGE-L = 0.0746
+Sample 55: ROUGE-L = 0.0175
+Sample 56: ROUGE-L = 0.0000
+Sample 57: ROUGE-L = 0.0759
+Sample 58: ROUGE-L = 0.0968
+Sample 59: ROUGE-L = 0.1622
+Sample 60: ROUGE-L = 0.1788
+Sample 61: ROUGE-L = 0.1250
+Sample 62: ROUGE-L = 0.1583
+Sample 63: ROUGE-L = 0.0930
+Sample 64: ROUGE-L = 0.2270
+Sample 65: ROUGE-L = 0.1830
+Sample 66: ROUGE-L = 0.2353
+Sample 67: ROUGE-L = 0.0000
+Sample 68: ROUGE-L = 0.0000
+Sample 69: ROUGE-L = 0.0339
+Sample 70: ROUGE-L = 0.2059
+Sample 71: ROUGE-L = 0.2632
+Sample 72: ROUGE-L = 0.0845
+Sample 73: ROUGE-L = 0.0000
+Sample 74: ROUGE-L = 0.1316
+Sample 75: ROUGE-L = 0.1346
+Sample 76: ROUGE-L = 0.0000
+Sample 77: ROUGE-L = 0.0933
+Sample 78: ROUGE-L = 0.0000
+Sample 79: ROUGE-L = 0.1019
+Sample 80: ROUGE-L = 0.1188
+Sample 81: ROUGE-L = 0.1637
+Sample 82: ROUGE-L = 0.1721
+Sample 83: ROUGE-L = 0.0000
+Sample 84: ROUGE-L = 0.0000
+Sample 85: ROUGE-L = 0.0000
+Sample 86: ROUGE-L = 0.1193
+Sample 87: ROUGE-L = 0.0345
+Sample 88: ROUGE-L = 0.0710
+Sample 89: ROUGE-L = 0.1659
+Sample 90: ROUGE-L = 0.0167
+Sample 91: ROUGE-L = 0.1333
+Sample 92: ROUGE-L = 0.0923
+Sample 93: ROUGE-L = 0.0000
+Sample 94: ROUGE-L = 0.0933
+Sample 95: ROUGE-L = 0.0982
+Sample 96: ROUGE-L = 0.1983
+Sample 97: ROUGE-L = 0.1707
+Sample 98: ROUGE-L = 0.1676
+Sample 99: ROUGE-L = 0.1986
+Sample 100: ROUGE-L = 0.1667
+Sample 101: ROUGE-L = 0.2368
+Sample 102: ROUGE-L = 0.1730
+Sample 103: ROUGE-L = 0.1429
+Sample 104: ROUGE-L = 0.1974
+Sample 105: ROUGE-L = 0.0909
+Sample 106: ROUGE-L = 0.0136
+Sample 107: ROUGE-L = 0.1220
+Sample 108: ROUGE-L = 0.1808
+Sample 109: ROUGE-L = 0.0206
+Sample 110: ROUGE-L = 0.1860
+Sample 111: ROUGE-L = 0.0000
+Sample 112: ROUGE-L = 0.0945
+Sample 113: ROUGE-L = 0.1852
+Sample 114: ROUGE-L = 0.0710
+Sample 115: ROUGE-L = 0.1401
+Sample 116: ROUGE-L = 0.0988
+Sample 117: ROUGE-L = 0.0000
+Sample 118: ROUGE-L = 0.1290
+Sample 119: ROUGE-L = 0.1860
+Sample 120: ROUGE-L = 0.0727
+Sample 121: ROUGE-L = 0.2045
+Sample 122: ROUGE-L = 0.1053
+Sample 123: ROUGE-L = 0.2341
+Sample 124: ROUGE-L = 0.1060
+Sample 125: ROUGE-L = 0.1046
+Sample 126: ROUGE-L = 0.1529
+Sample 127: ROUGE-L = 0.1481
+Sample 128: ROUGE-L = 0.1863
+Sample 129: ROUGE-L = 0.1085
+Sample 130: ROUGE-L = 0.0000
+Sample 131: ROUGE-L = 0.1358
+Sample 132: ROUGE-L = 0.1786
+Sample 133: ROUGE-L = 0.1074
+Sample 134: ROUGE-L = 0.0000
+Sample 135: ROUGE-L = 0.0577
+Sample 136: ROUGE-L = 0.0396
+Sample 137: ROUGE-L = 0.0000
+Sample 138: ROUGE-L = 0.1410
+Sample 139: ROUGE-L = 0.0000
+Sample 140: ROUGE-L = 0.0588
+Sample 141: ROUGE-L = 0.3386
+Sample 142: ROUGE-L = 0.0899
+Sample 143: ROUGE-L = 0.1111
+Sample 144: ROUGE-L = 0.1216
+Sample 145: ROUGE-L = 0.0828
+Sample 146: ROUGE-L = 0.2685
+Sample 147: ROUGE-L = 0.1143
+Sample 148: ROUGE-L = 0.0752
+Sample 149: ROUGE-L = 0.0000
+Sample 150: ROUGE-L = 0.2099
+Sample 151: ROUGE-L = 0.1758
+Sample 152: ROUGE-L = 0.0938
+Sample 153: ROUGE-L = 0.1447
+Sample 154: ROUGE-L = 0.1200
+Sample 155: ROUGE-L = 0.2246
+Sample 156: ROUGE-L = 0.1208
+Sample 157: ROUGE-L = 0.0959
+Sample 158: ROUGE-L = 0.1798
+Sample 159: ROUGE-L = 0.1884
+Sample 160: ROUGE-L = 0.2126
+Sample 161: ROUGE-L = 0.1250
+Sample 162: ROUGE-L = 0.0896
+Sample 163: ROUGE-L = 0.1392
+Sample 164: ROUGE-L = 0.0710
+Sample 165: ROUGE-L = 0.1295
+Sample 166: ROUGE-L = 0.1745
+Sample 167: ROUGE-L = 0.1259
+Sample 168: ROUGE-L = 0.0000
+Sample 169: ROUGE-L = 0.1096
+Sample 170: ROUGE-L = 0.0000
+Sample 171: ROUGE-L = 0.0333
+Sample 172: ROUGE-L = 0.2634
+Sample 173: ROUGE-L = 0.1324
+Sample 174: ROUGE-L = 0.1233
+Sample 175: ROUGE-L = 0.1326
+Sample 176: ROUGE-L = 0.0000
+Sample 177: ROUGE-L = 0.1429
+Sample 178: ROUGE-L = 0.1818
+Sample 179: ROUGE-L = 0.1404
+Sample 180: ROUGE-L = 0.0000
+Sample 181: ROUGE-L = 0.0000
+Sample 182: ROUGE-L = 0.1807
+Sample 183: ROUGE-L = 0.1189
+Sample 184: ROUGE-L = 0.0387
+Sample 185: ROUGE-L = 0.0308
+Sample 186: ROUGE-L = 0.1325
+Sample 187: ROUGE-L = 0.0000
+Sample 188: ROUGE-L = 0.1341
+Sample 189: ROUGE-L = 0.1848
+Sample 190: ROUGE-L = 0.1605
+Sample 191: ROUGE-L = 0.0000
+Sample 192: ROUGE-L = 0.2286
+Sample 193: ROUGE-L = 0.0805
+Sample 194: ROUGE-L = 0.0840
+Sample 195: ROUGE-L = 0.1374
+Sample 196: ROUGE-L = 0.1103
+Sample 197: ROUGE-L = 0.0000
+Sample 198: ROUGE-L = 0.3271
+Sample 199: ROUGE-L = 0.1613
+
+=== Aggregated ROUGE ===
+ROUGE-L (F1): 0.1117
+ROUGE-1: 0.1563, ROUGE-2: 0.0322, ROUGE-Lsum: 0.1091
+结果已保存到: ./training_output5/eval_step_150/Qwen_Qwen3-0.6B_step150_qmsum_temp0.0_results.json
+预测结果已保存到: ./training_output5/eval_step_150/Qwen_Qwen3-0.6B_step150_qmsum_temp0.0_predictions.jsonl
+
+正在评估 TRUTHFULQA 数据集...
+
+正在评估TruthfulQA数据集...
+BLEURT 在 GPU 7 上运行
+正在加载BLEURT评估器 (bleurt-large-128)...
+BLEURT评估器加载完成
+  已评估 50/817 个样本
+  已评估 100/817 个样本
+  已评估 150/817 个样本
+  已评估 200/817 个样本
+  已评估 250/817 个样本
+  已评估 300/817 个样本
+  已评估 350/817 个样本
+  已评估 400/817 个样本
+  已评估 450/817 个样本
+  已评估 500/817 个样本
+  已评估 550/817 个样本
+  已评估 600/817 个样本
+  已评估 650/817 个样本
+  已评估 700/817 个样本
+  已评估 750/817 个样本
+  已评估 800/817 个样本
+  已评估 817/817 个样本
+
+TruthfulQA评估完成:
+  avg max score: -0.853438
+  avg accuracy: 0.468
+  BLEURT子进程已结束，显存已释放
+结果已保存到: ./training_output5/eval_step_150/Qwen_Qwen3-0.6B_step150_truthfulqa_temp0.0_results.json
+预测结果已保存到: ./training_output5/eval_step_150/Qwen_Qwen3-0.6B_step150_truthfulqa_temp0.0_predictions.jsonl
+
+============================================================
+评估结果摘要
+============================================================
+
+QMSum:
+  样本数量: 200
+  ROUGE-L (F1): 0.1117
+  ROUGE-1: 0.1563
+  ROUGE-2: 0.0322
+  ROUGE-Lsum: 0.1091
+
+TruthfulQA:
+  样本数量: 817
+  avg max score: -0.853438
+  avg accuracy: 0.468
+
+============================================================
+
+已清理临时文件
+
+============================================================
+综合评分
+============================================================
+  QMSum ROUGE-L: 0.1117
+  TruthfulQA Accuracy: 0.4676
+  TruthfulQA Avg Max Score: -0.8534
+  综合分数: -0.2742
+============================================================
+评估历史已保存到: ./training_output5/eval_history.json
+
+步骤 150 评估完成
+综合分数: -0.2742 (最佳: -0.1302 @ step 50)
+{'loss': 1.6021, 'grad_norm': 0.9722627997398376, 'learning_rate': 4.8229904546148635e-06, 'epoch': 0.63}
+
+用户中断训练...

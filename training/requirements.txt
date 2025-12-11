@@ -1,0 +1,32 @@
+# LongBench SFT训练依赖
+
+# 核心框架
+torch>=2.0.0
+transformers>=4.40.0
+datasets>=2.16.0
+accelerate>=0.25.0
+
+# PEFT（LoRA等参数高效微调）
+peft>=0.10.0
+
+# QLoRA 量化支持
+bitsandbytes>=0.41.0
+
+# 评估指标
+evaluate>=0.4.0
+rouge-score>=0.1.2
+nltk>=3.8.0
+
+# 可选：Flash Attention（需要CUDA 11.6+）
+# pip install flash-attn --no-build-isolation
+
+# 可选：DeepSpeed（分布式训练）
+# deepspeed>=0.12.0
+
+# 工具
+tqdm>=4.66.0
+rich>=13.0.0
+numpy>=1.24.0
+
+
+tf-keras

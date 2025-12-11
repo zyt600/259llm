@@ -1,0 +1,14 @@
+#Qwen3-4B-Base
+#Qwen3-4B-Instruct-2507-FP8
+#Qwen3-4B-AWQ
+
+#unsloth/Qwen3-14B
+#unsloth/Qwen3-1.7B
+
+#Qwen3-4B-Thinking-2507
+#unsloth/Qwen3-30B-A3B-Thinking-2507-GGUF
+
+#unsloth/Qwen3-14B
+#Qwen3-1.7B-GPTQ-Int8
+#Qwen3-1.7B
+#unsloth/Qwen3-1.7B(最优)

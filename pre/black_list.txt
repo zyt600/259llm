@@ -1,0 +1,20 @@
+# GGUF 模型黑名单
+unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF
+unsloth/Llama-3.2-3B-Instruct-GGUF
+unsloth/Phi-4-mini-reasoning-GGUF
+unsloth/Qwen3-0.6B-GGUF
+unsloth/Qwen3-1.7B-GGUF
+unsloth/Qwen3-1.7B-Q4_0.gguf
+unsloth/Qwen3-14B-GGUF
+unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF
+unsloth/Qwen3-30B-A3B-Thinking-2507-GGUF
+unsloth/Qwen3-4B-Instruct-2507-GGUF
+unsloth/gpt-oss-20b-GGUF
+
+# 14B 和 20B 模型
+unsloth/Qwen3-14B
+unsloth/gpt-oss-20b
+
+Llama-3.2-1B
+Llama-3.2-3B
+Qwen3-4B-Base
