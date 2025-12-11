@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-绘图脚本 - 模型大小 vs 综合分数
-纵轴：综合分数（三个指标相加）
+Plotting script - Model size vs composite score
+Y-axis: Composite score (sum of three metrics)
   - QMSum ROUGE-L
   - TruthfulQA Accuracy
-  - TruthfulQA Max Score（归一化）
-横轴：模型大小（参数量，单位：B）
+  - TruthfulQA Max Score (normalized)
+X-axis: Model size (parameters, unit: B)
 """
 
 import os
@@ -18,7 +18,7 @@ import matplotlib
 import numpy as np
 matplotlib.rcParams['font.family'] = ['DejaVu Sans', 'sans-serif']
 
-# 结果目录
+# Results directory
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 OUTPUT_DIR = os.path.dirname(__file__)
 BLACKLIST_FILE = os.path.join(os.path.dirname(__file__), "black_list.txt")
@@ -26,7 +26,7 @@ WHITELIST_FILE = os.path.join(os.path.dirname(__file__), "white_list.txt")
 
 
 def load_list_file(filepath, list_name):
-    """加载列表文件（黑名单或白名单）"""
+    """Load list file (blacklist or whitelist)"""
     items = []
     if not os.path.exists(filepath):
         return items
@@ -38,23 +38,23 @@ def load_list_file(filepath, list_name):
                 if line and not line.startswith("#"):
                     items.append(line)
     except Exception as e:
-        print(f"警告: 读取{list_name}文件失败: {e}")
+        print(f"Warning: Failed to read {list_name} file: {e}")
     
     return items
 
 
 def load_blacklist():
-    """加载黑名单文件"""
-    return load_list_file(BLACKLIST_FILE, "黑名单")
+    """Load blacklist file"""
+    return load_list_file(BLACKLIST_FILE, "blacklist")
 
 
 def load_whitelist():
-    """加载白名单文件"""
-    return load_list_file(WHITELIST_FILE, "白名单")
+    """Load whitelist file"""
+    return load_list_file(WHITELIST_FILE, "whitelist")
 
 
 def get_display_name(model_name):
-    """获取模型的显示名称"""
+    """Get display name for model"""
     original = model_name.replace("_", "/", 1)
     
     if "/" in original:
@@ -70,12 +70,12 @@ def get_display_name(model_name):
 
 
 def get_display_name_for_blacklist(model_name):
-    """获取模型的显示名称（用于黑名单匹配）"""
+    """Get display name for blacklist matching"""
     return get_display_name(model_name)
 
 
 def is_in_list(model_name, name_list):
-    """检查模型是否在列表中"""
+    """Check if model is in list"""
     display_name = get_display_name_for_blacklist(model_name)
     
     for list_item in name_list:
@@ -89,51 +89,51 @@ def is_in_list(model_name, name_list):
 
 
 def is_blacklisted(model_name, blacklist):
-    """检查模型是否在黑名单中"""
+    """Check if model is blacklisted"""
     return is_in_list(model_name, blacklist)
 
 
 def is_whitelisted(model_name, whitelist):
-    """检查模型是否在白名单中"""
+    """Check if model is whitelisted"""
     return is_in_list(model_name, whitelist)
 
 
 def extract_model_size(model_name):
     """
-    从模型名称中提取模型大小（参数量，单位：B）
+    Extract model size from model name (parameters, unit: B)
     
-    示例:
+    Examples:
         Llama-3.2-1B -> 1.0
         Qwen3-1.7B -> 1.7
         Qwen3-0.6B -> 0.6
         Qwen3-4B -> 4.0
     """
-    # 将下划线替换回斜杠
+    # Replace underscores back to slashes
     original = model_name.replace("_", "/", 1)
     
-    # 提取模型名部分（去掉组织名）
+    # Extract model name part (remove organization name)
     if "/" in original:
         model_short = original.split("/")[-1]
     else:
         model_short = original
     
-    # 匹配常见的模型大小格式
-    # 格式1: X.XB 或 XB (如 1.7B, 4B)
+    # Match common model size formats
+    # Format 1: X.XB or XB (e.g. 1.7B, 4B)
     match = re.search(r'(\d+\.?\d*)[Bb]', model_short)
     if match:
         return float(match.group(1))
     
-    # 格式2: -X.XB- 或 -XB- (如 -1.7B-)
+    # Format 2: -X.XB- or -XB- (e.g. -1.7B-)
     match = re.search(r'-(\d+\.?\d*)[Bb]-', model_short)
     if match:
         return float(match.group(1))
     
-    # 如果无法提取，返回 None
+    # If cannot extract, return None
     return None
 
 
 def parse_filename(filename):
-    """解析结果文件名，提取模型名称、数据集和温度"""
+    """Parse result filename, extract model name, dataset and temperature"""
     base = filename.replace("_results.json", "")
     
     match = re.search(r"_temp([\d.]+)$", base)
@@ -157,20 +157,20 @@ def parse_filename(filename):
 
 def load_results(max_temp=1.0, target_temp=None, no_filter=False):
     """
-    加载所有结果文件
+    Load all result files
     
-    参数:
-        max_temp: 最高温度，只加载温度 <= max_temp 的数据点
-        target_temp: 如果指定，只加载该温度的数据点
-        no_filter: 如果为True，不进行黑名单/白名单过滤
+    Args:
+        max_temp: Maximum temperature, only load data points with temp <= max_temp
+        target_temp: If specified, only load data points with this temperature
+        no_filter: If True, disable blacklist/whitelist filtering
     
-    返回: (data, filtered_models)
+    Returns: (data, filtered_models)
         data: {
             "qmsum_rougeL": {model: score},
             "truthfulqa_acc": {model: score},
             "truthfulqa_max_score": {model: score}
         }
-        filtered_models: set 被过滤掉的模型集合
+        filtered_models: set of filtered model names
     """
     data = {
         "qmsum_rougeL": {},
@@ -180,24 +180,24 @@ def load_results(max_temp=1.0, target_temp=None, no_filter=False):
     
     filtered_models = set()
     
-    # 加载白名单和黑名单（参考 draw/plot_results.py 的逻辑）
+    # Load whitelist and blacklist (reference draw/plot_results.py logic)
     whitelist = load_whitelist()
     blacklist = load_blacklist()
     
-    # 白名单优先：如果白名单有内容，则只考虑白名单，忽略黑名单
+    # Whitelist priority: if whitelist has content, only consider whitelist, ignore blacklist
     use_whitelist = len(whitelist) > 0
     
     if not no_filter:
         if use_whitelist:
-            print(f"已加载白名单: {len(whitelist)} 个条目 (优先使用白名单，忽略黑名单)")
+            print(f"Loaded whitelist: {len(whitelist)} entries (whitelist priority, ignoring blacklist)")
         elif blacklist:
-            print(f"已加载黑名单: {len(blacklist)} 个条目")
+            print(f"Loaded blacklist: {len(blacklist)} entries")
     
     if not os.path.exists(RESULTS_DIR):
-        print(f"错误: 结果目录不存在: {RESULTS_DIR}")
+        print(f"Error: Results directory not found: {RESULTS_DIR}")
         return data, filtered_models
     
-    # 收集每个模型在不同温度下的数据
+    # Collect data for each model at different temperatures
     temp_data = defaultdict(lambda: {
         "qmsum_rougeL": {},
         "truthfulqa_acc": {},
@@ -212,22 +212,22 @@ def load_results(max_temp=1.0, target_temp=None, no_filter=False):
         if model is None:
             continue
         
-        # 过滤温度
+        # Filter temperature
         if target_temp is not None:
-            if abs(temp - target_temp) > 0.01:  # 允许小的浮点误差
+            if abs(temp - target_temp) > 0.01:  # Allow small floating point error
                 continue
         elif temp > max_temp:
             continue
         
-        # 白名单优先（参考 draw/plot_results.py 的逻辑）
+        # Whitelist priority (reference draw/plot_results.py logic)
         if not no_filter:
             if use_whitelist:
-                # 如果有白名单，只保留白名单中的模型
+                # If whitelist exists, only keep models in whitelist
                 if not is_whitelisted(model, whitelist):
                     filtered_models.add(model)
                     continue
             else:
-                # 如果没有白名单，使用黑名单过滤
+                # If no whitelist, use blacklist filter
                 if is_blacklisted(model, blacklist):
                     filtered_models.add(model)
                     continue
@@ -247,15 +247,15 @@ def load_results(max_temp=1.0, target_temp=None, no_filter=False):
                 temp_data[model]["truthfulqa_max_score"][temp] = max_score
                 
         except Exception as e:
-            print(f"警告: 读取 {filename} 失败: {e}")
+            print(f"Warning: Failed to read {filename}: {e}")
     
-    # 对于每个模型，选择指定温度的数据，如果没有指定温度则选择温度最低的数据
+    # For each model, select data at specified temperature, if not specified select lowest temperature
     for model, model_data in temp_data.items():
         if target_temp is not None:
-            # 使用指定温度
+            # Use specified temperature
             target_t = target_temp
         else:
-            # 选择最低温度
+            # Select lowest temperature
             all_temps = set()
             for dataset_data in model_data.values():
                 all_temps.update(dataset_data.keys())
@@ -264,7 +264,7 @@ def load_results(max_temp=1.0, target_temp=None, no_filter=False):
             else:
                 continue
         
-        # 获取该温度下的数据
+        # Get data at that temperature
         if target_t in model_data["qmsum_rougeL"]:
             data["qmsum_rougeL"][model] = model_data["qmsum_rougeL"][target_t]
         if target_t in model_data["truthfulqa_acc"]:
@@ -277,33 +277,33 @@ def load_results(max_temp=1.0, target_temp=None, no_filter=False):
 
 def normalize_max_score(max_score):
     """
-    归一化 TruthfulQA Max Score
-    由于 Max Score 通常是负数（如 -0.8），需要归一化到 [0, 1] 范围
-    假设范围是 [-1, 0]，归一化公式: (score + 1) / 1
+    Normalize TruthfulQA Max Score
+    Since Max Score is typically negative (e.g. -0.8), need to normalize to [0, 1] range
+    Assuming range is [-1, 0], normalization formula: (score + 1) / 1
     """
-    # 将 [-1, 0] 范围映射到 [0, 1]
-    # 如果 score = -1，归一化后 = 0
-    # 如果 score = 0，归一化后 = 1
+    # Map [-1, 0] range to [0, 1]
+    # If score = -1, normalized = 0
+    # If score = 0, normalized = 1
     normalized = (max_score + 1.0) / 1.0
-    # 限制在 [0, 1] 范围内
+    # Limit to [0, 1] range
     return max(0.0, min(1.0, normalized))
 
 
 def calculate_composite_score(rougeL, accuracy, max_score):
     """
-    计算综合分数（三个指标相加）
+    Calculate composite score (sum of three metrics)
     
-    参数:
-        rougeL: QMSum ROUGE-L 分数 (0-1)
+    Args:
+        rougeL: QMSum ROUGE-L score (0-1)
         accuracy: TruthfulQA Accuracy (0-1)
-        max_score: TruthfulQA Max Score (需要归一化)
+        max_score: TruthfulQA Max Score (needs normalization)
     
-    返回: 综合分数
+    Returns: Composite score
     """
-    # 归一化 max_score
+    # Normalize max_score
     normalized_max_score = normalize_max_score(max_score)
     
-    # 三个指标相加
+    # Sum three metrics
     composite = rougeL + accuracy + normalized_max_score
     
     return composite
@@ -311,53 +311,53 @@ def calculate_composite_score(rougeL, accuracy, max_score):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="绘制模型大小 vs 综合分数图",
+        description="Plot model size vs composite score",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
         "--temp",
         type=float,
         default=0.0,
-        help="指定温度，只使用该温度的数据（默认: 0.0）"
+        help="Specify temperature, only use data at this temperature (default: 0.0)"
     )
     parser.add_argument(
         "--max_temp",
         type=float,
         default=None,
-        help="最高温度，只使用温度 <= max_temp 的数据点（已弃用，使用 --temp 代替）"
+        help="Maximum temperature, only use data points with temp <= max_temp (deprecated, use --temp instead)"
     )
     parser.add_argument(
         "--no-filter",
         action="store_true",
-        help="禁用黑名单/白名单过滤，显示所有模型"
+        help="Disable blacklist/whitelist filtering, show all models"
     )
     args = parser.parse_args()
     
-    # 如果指定了 max_temp，给出警告并使用 temp=0.0
+    # If max_temp is specified, give warning and use temp=0.0
     if args.max_temp is not None:
-        print("警告: --max_temp 参数已弃用，使用 --temp=0.0 代替")
+        print("Warning: --max_temp parameter is deprecated, using --temp=0.0 instead")
         args.temp = 0.0
     
-    print("正在加载结果数据...")
-    print(f"使用温度: {args.temp}")
+    print("Loading result data...")
+    print(f"Using temperature: {args.temp}")
     if args.no_filter:
-        print("已禁用黑名单/白名单过滤，将显示所有模型")
+        print("Blacklist/whitelist filtering disabled, showing all models")
     
     data, filtered_models = load_results(max_temp=args.temp + 0.01, target_temp=args.temp, no_filter=args.no_filter)
     
-    # 过滤模型（如果未禁用过滤）- 参考 draw/plot_results.py 的逻辑
+    # Filter models (if filtering not disabled) - reference draw/plot_results.py logic
     if not args.no_filter:
         whitelist = load_whitelist()
         blacklist = load_blacklist()
         use_whitelist = len(whitelist) > 0
         
-        # 白名单优先：如果白名单有内容，则只考虑白名单，忽略黑名单
+        # Whitelist priority: if whitelist has content, only consider whitelist, ignore blacklist
         for key in data:
             if use_whitelist:
-                # 使用白名单：只保留白名单中的模型
+                # Use whitelist: only keep models in whitelist
                 models_to_remove = [model for model in data[key] if not is_whitelisted(model, whitelist)]
             else:
-                # 使用黑名单：移除黑名单中的模型
+                # Use blacklist: remove models in blacklist
                 models_to_remove = [model for model in data[key] if is_blacklisted(model, blacklist)]
             
             for model in models_to_remove:
@@ -369,35 +369,35 @@ def main():
         whitelist = load_whitelist()
         use_whitelist = len(whitelist) > 0
         if use_whitelist:
-            print("不在白名单中的模型（已过滤）:")
+            print("Models not in whitelist (filtered):")
         else:
-            print("被黑名单过滤掉的模型:")
+            print("Models filtered by blacklist:")
         print("="*60)
         for model in sorted(filtered_models):
             print(f"  - {get_display_name(model)} ({model})")
-        print(f"\n共过滤 {len(filtered_models)} 个模型")
+        print(f"\nFiltered {len(filtered_models)} models total")
         print("="*60 + "\n")
     elif not args.no_filter:
         whitelist = load_whitelist()
         use_whitelist = len(whitelist) > 0
         if use_whitelist:
-            print("\n所有模型都在白名单中\n")
+            print("\nAll models are in whitelist\n")
         else:
-            print("\n没有模型被黑名单过滤\n")
+            print("\nNo models filtered by blacklist\n")
     
-    # 收集所有有完整数据的模型
+    # Collect all models with complete data
     models_with_all_data = set()
     for model in data["qmsum_rougeL"].keys():
         if model in data["truthfulqa_acc"] and model in data["truthfulqa_max_score"]:
             models_with_all_data.add(model)
     
     if not models_with_all_data:
-        print("错误: 没有找到同时具有 QMSum 和 TruthfulQA 数据的模型")
+        print("Error: No models found with both QMSum and TruthfulQA data")
         return
     
-    print(f"找到 {len(models_with_all_data)} 个具有完整数据的模型")
+    print(f"Found {len(models_with_all_data)} models with complete data")
     
-    # 计算综合分数和模型大小
+    # Calculate composite score and model size
     model_sizes = []
     composite_scores = []
     model_names = []
@@ -415,19 +415,19 @@ def main():
             composite_scores.append(composite)
             model_names.append(get_display_name(model))
         else:
-            print(f"警告: 无法提取模型大小: {model}")
+            print(f"Warning: Cannot extract model size: {model}")
     
     if not model_sizes:
-        print("错误: 没有找到可以提取模型大小的模型")
+        print("Error: No models found with extractable model size")
         return
     
-    # 创建图形
+    # Create figure
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
     
-    # 绘制散点图
+    # Plot scatter
     scatter = ax.scatter(model_sizes, composite_scores, s=100, alpha=0.6, edgecolors='black', linewidths=1)
     
-    # 添加模型名称标签
+    # Add model name labels
     for i, name in enumerate(model_names):
         ax.annotate(name, 
                    (model_sizes[i], composite_scores[i]),
@@ -436,23 +436,23 @@ def main():
                    fontsize=8,
                    alpha=0.7)
     
-    # 设置坐标轴标签
+    # Set axis labels
     ax.set_xlabel("Model Size (Billion Parameters)", fontsize=14, fontweight='bold')
     ax.set_ylabel("Composite Score\n(QMSum ROUGE-L + TruthfulQA Accuracy + Normalized Max Score)", 
                   fontsize=14, fontweight='bold')
     
-    # 设置标题
+    # Set title
     ax.set_title(f"Model Size vs Composite Score (Temperature: {args.temp})", fontsize=16, fontweight='bold')
     
-    # 添加网格
+    # Add grid
     ax.grid(True, alpha=0.3, linestyle='--')
     
-    # 设置坐标轴范围
+    # Set axis range
     ax.set_xlim(left=0)
     if model_sizes:
         ax.set_xlim(right=max(model_sizes) * 1.1)
     
-    # 添加趋势线（可选）
+    # Add trend line (optional)
     if len(model_sizes) > 1:
         z = np.polyfit(model_sizes, composite_scores, 1)
         p = np.poly1d(z)
@@ -462,28 +462,28 @@ def main():
     
     plt.tight_layout()
     
-    # 保存图片
+    # Save image
     output_filename = f"model_size_vs_score_temp{args.temp}.png"
     output_path = os.path.join(OUTPUT_DIR, output_filename)
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
-    print(f"\n图片已保存到: {output_path}")
+    print(f"\nImage saved to: {output_path}")
     
     plt.close()
     
-    # 打印数据摘要
+    # Print data summary
     print("\n" + "="*60)
-    print("数据摘要")
+    print("Data Summary")
     print("="*60)
     print(f"{'Model':<40} {'Size (B)':<12} {'Composite Score':<15} {'ROUGE-L':<10} {'Accuracy':<10} {'Max Score':<10}")
     print("-"*100)
     
-    # 按模型大小排序
+    # Sort by model size
     sorted_indices = sorted(range(len(model_sizes)), key=lambda i: model_sizes[i])
     for i in sorted_indices:
         model = model_names[i]
         size = model_sizes[i]
         score = composite_scores[i]
-        # 找到对应的原始模型名
+        # Find corresponding original model name
         for orig_model in models_with_all_data:
             if get_display_name(orig_model) == model:
                 rougeL = data["qmsum_rougeL"][orig_model]
@@ -496,32 +496,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-    # 打印数据摘要
-    print("\n" + "="*60)
-    print("数据摘要")
-    print("="*60)
-    print(f"{'Model':<40} {'Size (B)':<12} {'Composite Score':<15} {'ROUGE-L':<10} {'Accuracy':<10} {'Max Score':<10}")
-    print("-"*100)
-    
-    # 按模型大小排序
-    sorted_indices = sorted(range(len(model_sizes)), key=lambda i: model_sizes[i])
-    for i in sorted_indices:
-        model = model_names[i]
-        size = model_sizes[i]
-        score = composite_scores[i]
-        # 找到对应的原始模型名
-        for orig_model in models_with_all_data:
-            if get_display_name(orig_model) == model:
-                rougeL = data["qmsum_rougeL"][orig_model]
-                accuracy = data["truthfulqa_acc"][orig_model]
-                max_score = data["truthfulqa_max_score"][orig_model]
-                break
-        
-        print(f"{model:<40} {size:<12.2f} {score:<15.4f} {rougeL:<10.4f} {accuracy:<10.4f} {max_score:<10.4f}")
-
-
-if __name__ == "__main__":
-    main()
-

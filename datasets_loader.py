@@ -1,5 +1,5 @@
 """
-数据集加载模块 - 加载LongBench QMSum和TruthfulQA数据集
+Dataset loading module - Load LongBench QMSum and TruthfulQA datasets
 """
 from typing import List, Dict, Optional, Tuple
 from datasets import load_dataset
@@ -7,25 +7,25 @@ from datasets import load_dataset
 
 def load_qmsum_dataset(max_samples: Optional[int] = None) -> List[Dict]:
     """
-    加载LongBench的QMSum数据集
+    Load LongBench QMSum dataset
     
-    QMSum是一个会议摘要数据集，任务是根据会议记录生成摘要
-    使用 zai-org/LongBench 数据集
+    QMSum is a meeting summarization dataset, the task is to generate summaries based on meeting transcripts
+    Uses zai-org/LongBench dataset
     
     Args:
-        max_samples: 最大样本数，None表示加载全部
+        max_samples: Maximum number of samples, None means load all
         
     Returns:
-        List[Dict]: 数据样本列表，每个样本包含input, context, answer等字段
+        List[Dict]: Data sample list, each sample contains input, context, answer fields
     """
-    print("正在加载LongBench QMSum数据集...")
+    print("Loading LongBench QMSum dataset...")
     
-    # 使用 THUDM/LongBench 数据集，需要trust_remote_code
+    # Use THUDM/LongBench dataset, requires trust_remote_code
     try:
         dataset = load_dataset("THUDM/LongBench", "qmsum", split="test", trust_remote_code=True)
     except Exception as e:
-        print(f"从THUDM/LongBench加载失败: {e}")
-        # 尝试备用数据集
+        print(f"Failed to load from THUDM/LongBench: {e}")
+        # Try backup dataset
         dataset = load_dataset("namespace-Pt/LongBench", "qmsum", split="test", trust_remote_code=True)
     
     samples = []
@@ -33,7 +33,7 @@ def load_qmsum_dataset(max_samples: Optional[int] = None) -> List[Dict]:
         if max_samples is not None and i >= max_samples:
             break
         
-        # 获取参考答案
+        # Get reference answer
         ans = item.get("answers", [])
         if isinstance(ans, list) and len(ans) > 0:
             reference = ans[0].strip()
@@ -45,33 +45,33 @@ def load_qmsum_dataset(max_samples: Optional[int] = None) -> List[Dict]:
             "input": item.get("input", ""),
             "context": item.get("context", ""),
             "answers": ans,
-            "reference": reference,  # 用于评估的参考答案
+            "reference": reference,  # Reference answer for evaluation
             "length": item.get("length", 0),
             "dataset": "qmsum",
             "all_classes": item.get("all_classes", None),
         }
         
-        # 构建完整的输入prompt
+        # Build complete input prompt
         context = sample["context"]
         query = sample["input"]
         
         sample["full_prompt"] = _build_qmsum_prompt(context, query)
         samples.append(sample)
     
-    print(f"QMSum数据集加载完成，共 {len(samples)} 个样本")
+    print(f"QMSum dataset loaded, {len(samples)} samples total")
     return samples
 
 
 def _build_qmsum_prompt(context: str, query: str) -> str:
     """
-    构建QMSum的prompt
+    Build QMSum prompt
     
     Args:
-        context: 会议记录内容
-        query: 查询/问题
+        context: Meeting transcript content
+        query: Query/question
         
     Returns:
-        str: 完整的prompt
+        str: Complete prompt
     """
     prompt = f"""You are a helpful assistant. Please summarize the following meeting transcript based on the query.
 
@@ -86,20 +86,20 @@ Summary:"""
 
 def load_truthfulqa_dataset(max_samples: Optional[int] = None) -> List[Dict]:
     """
-    加载TruthfulQA数据集
+    Load TruthfulQA dataset
     
-    TruthfulQA用于评估模型生成真实答案的能力
-    使用 truthfulqa/truthful_qa 的 generation 配置
+    TruthfulQA evaluates models' ability to generate truthful answers
+    Uses truthfulqa/truthful_qa generation configuration
     
     Args:
-        max_samples: 最大样本数，None表示加载全部
+        max_samples: Maximum number of samples, None means load all
         
     Returns:
-        List[Dict]: 数据样本列表
+        List[Dict]: Data sample list
     """
-    print("正在加载TruthfulQA数据集...")
+    print("Loading TruthfulQA dataset...")
     
-    # 使用官方数据集路径
+    # Use official dataset path
     dataset = load_dataset("truthfulqa/truthful_qa", "generation", split="validation")
     
     samples = []
@@ -121,19 +121,19 @@ def load_truthfulqa_dataset(max_samples: Optional[int] = None) -> List[Dict]:
         sample["full_prompt"] = _build_truthfulqa_prompt(sample["question"])
         samples.append(sample)
     
-    print(f"TruthfulQA数据集加载完成，共 {len(samples)} 个样本")
+    print(f"TruthfulQA dataset loaded, {len(samples)} samples total")
     return samples
 
 
 def _build_truthfulqa_prompt(question: str) -> str:
     """
-    构建TruthfulQA的prompt
+    Build TruthfulQA prompt
     
     Args:
-        question: 问题
+        question: Question
         
     Returns:
-        str: 完整的prompt
+        str: Complete prompt
     """
     prompt = f"""Q: {question}
 A:"""
@@ -145,14 +145,14 @@ def load_dataset_by_name(
     max_samples: Optional[int] = None
 ) -> List[Dict]:
     """
-    根据名称加载数据集
+    Load dataset by name
     
     Args:
-        dataset_name: 数据集名称 ('qmsum' 或 'truthfulqa')
-        max_samples: 最大样本数
+        dataset_name: Dataset name ('qmsum' or 'truthfulqa')
+        max_samples: Maximum number of samples
         
     Returns:
-        List[Dict]: 数据样本列表
+        List[Dict]: Data sample list
     """
     dataset_name = dataset_name.lower().strip()
     
@@ -161,51 +161,50 @@ def load_dataset_by_name(
     elif dataset_name == "truthfulqa":
         return load_truthfulqa_dataset(max_samples)
     else:
-        raise ValueError(f"未知的数据集名称: {dataset_name}。支持的数据集: qmsum, truthfulqa")
+        raise ValueError(f"Unknown dataset name: {dataset_name}. Supported datasets: qmsum, truthfulqa")
 
 
 def get_dataset_info(dataset_name: str) -> Dict:
     """
-    获取数据集信息
+    Get dataset information
     
     Args:
-        dataset_name: 数据集名称
+        dataset_name: Dataset name
         
     Returns:
-        Dict: 数据集信息
+        Dict: Dataset information
     """
     info = {
         "qmsum": {
             "name": "QMSum",
             "full_name": "Query-based Multi-domain Meeting Summarization",
-            "task": "摘要生成",
+            "task": "Summarization",
             "metric": "ROUGE-L",
-            "description": "基于查询的会议摘要数据集，评估模型在长文本理解和摘要生成方面的能力",
+            "description": "Query-based meeting summarization dataset, evaluates model's long text understanding and summarization ability",
         },
         "truthfulqa": {
             "name": "TruthfulQA",
             "full_name": "TruthfulQA: Measuring How Models Mimic Human Falsehoods",
-            "task": "问答/真实性评估",
+            "task": "QA/Truthfulness Evaluation",
             "metric": "Accuracy / BLEURT",
-            "description": "评估模型生成真实、准确答案的能力，避免常见的人类错误信念",
+            "description": "Evaluates model's ability to generate truthful, accurate answers, avoiding common human misconceptions",
         }
     }
     
-    return info.get(dataset_name.lower(), {"name": dataset_name, "description": "未知数据集"})
+    return info.get(dataset_name.lower(), {"name": dataset_name, "description": "Unknown dataset"})
 
 
 if __name__ == "__main__":
-    # 测试数据集加载
-    print("测试加载QMSum数据集（前5个样本）...")
+    # Test dataset loading
+    print("Testing QMSum dataset loading (first 5 samples)...")
     qmsum_samples = load_qmsum_dataset(max_samples=5)
     if qmsum_samples:
-        print(f"第一个样本的prompt前500字符:\n{qmsum_samples[0]['full_prompt'][:500]}...")
+        print(f"First sample prompt (first 500 chars):\n{qmsum_samples[0]['full_prompt'][:500]}...")
     
     print("\n" + "="*50 + "\n")
     
-    print("测试加载TruthfulQA数据集（前5个样本）...")
+    print("Testing TruthfulQA dataset loading (first 5 samples)...")
     tqa_samples = load_truthfulqa_dataset(max_samples=5)
     if tqa_samples:
-        print(f"第一个样本:\n问题: {tqa_samples[0]['question']}")
-        print(f"最佳答案: {tqa_samples[0]['best_answer']}")
-
+        print(f"First sample:\nQuestion: {tqa_samples[0]['question']}")
+        print(f"Best answer: {tqa_samples[0]['best_answer']}")

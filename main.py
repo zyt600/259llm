@@ -1,21 +1,21 @@
 """
-主程序入口 - 大模型推理评估工具
+Main program entry - LLM Inference Evaluation Tool
 
-使用方法:
-    python main.py --model_name <模型名称> [--gpu <GPU编号>] [--max_samples <样本数>]
+Usage:
+    python main.py --model_name <model_name> [--gpu <GPU_IDs>] [--max_samples <sample_count>]
 
-示例:
+Examples:
     python main.py --model_name meta-llama/Llama-2-7b-chat-hf --gpu 0,1
     python main.py --model_name Qwen/Qwen2-7B-Instruct --max_samples 100
 """
 import os
 import sys
 
-# 抑制TensorFlow日志（必须在任何可能导入TensorFlow的代码之前设置）
+# Suppress TensorFlow logs (must be set before importing any code that might import TensorFlow)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-# 设置CUDA库路径（llama.cpp server需要）
+# Set CUDA library paths (needed for llama.cpp server)
 def _setup_cuda_libs():
     cuda_lib_paths = [
         "/usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib",
@@ -28,16 +28,16 @@ def _setup_cuda_libs():
 
 _setup_cuda_libs()
 
-# 设置CUDA_HOME环境变量（必须在导入torch之前）
+# Set CUDA_HOME environment variable (must be before importing torch)
 def _setup_cuda_home():
     if "CUDA_HOME" not in os.environ:
-        # 尝试从nvidia包中获取CUDA路径
+        # Try to get CUDA path from nvidia package
         try:
             import nvidia.cuda_runtime
             cuda_path = os.path.dirname(os.path.dirname(nvidia.cuda_runtime.__file__))
             os.environ["CUDA_HOME"] = cuda_path
         except ImportError:
-            # 尝试常见路径
+            # Try common paths
             for path in ["/usr/local/cuda", "/usr/local/cuda-12"]:
                 if os.path.exists(path):
                     os.environ["CUDA_HOME"] = path
@@ -48,7 +48,7 @@ _setup_cuda_home()
 import time
 from datetime import datetime
 
-# 导入各模块
+# Import modules
 from args_parser import parse_args, print_args
 from model_loader import ModelManager
 from datasets_loader import load_dataset_by_name, get_dataset_info
@@ -62,24 +62,24 @@ from evaluator import (
 
 
 def main():
-    """主函数"""
-    # 解析命令行参数
+    """Main function"""
+    # Parse command line arguments
     args = parse_args()
     print_args(args)
     
-    # 记录开始时间
+    # Record start time
     start_time = time.time()
-    print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # 存储所有数据集的样本（推理后）
+    # Store samples from all datasets (after inference)
     all_samples = {}
-    # 存储所有评估结果
+    # Store all evaluation results
     all_results = {}
     
     try:
-        # 第一阶段：加载模型并完成所有推理
+        # Phase 1: Load model and complete all inference
         print("\n" + "=" * 60)
-        print("第一阶段：模型推理")
+        print("Phase 1: Model Inference")
         print("=" * 60)
         
         with ModelManager(
@@ -89,7 +89,7 @@ def main():
             mem_fraction=args.mem_fraction
         ) as model_manager:
             
-            # 创建推理运行器
+            # Create inference runner
             runner = InferenceRunner(
                 engine=model_manager.engine,
                 temperature=args.temperature,
@@ -100,48 +100,48 @@ def main():
                 gpu_ids=args.gpu_ids
             )
             
-            # 遍历每个数据集进行推理
+            # Iterate through each dataset for inference
             for dataset_name in args.dataset_list:
                 print(f"\n{'='*60}")
-                print(f"数据集: {dataset_name.upper()}")
+                print(f"Dataset: {dataset_name.upper()}")
                 print(f"{'='*60}")
                 
-                # 打印数据集信息
+                # Print dataset info
                 dataset_info = get_dataset_info(dataset_name)
-                print(f"任务: {dataset_info.get('task', 'N/A')}")
-                print(f"描述: {dataset_info.get('description', 'N/A')}")
+                print(f"Task: {dataset_info.get('task', 'N/A')}")
+                print(f"Description: {dataset_info.get('description', 'N/A')}")
                 
-                # 加载数据集
+                # Load dataset
                 samples = load_dataset_by_name(
                     dataset_name=dataset_name,
                     max_samples=args.max_samples
                 )
                 
                 if not samples:
-                    print(f"警告: 数据集 {dataset_name} 为空，跳过")
+                    print(f"Warning: Dataset {dataset_name} is empty, skipping")
                     continue
                 
-                # 运行推理
-                print(f"\n开始推理，共 {len(samples)} 个样本...")
+                # Run inference
+                print(f"\nStarting inference, {len(samples)} samples total...")
                 samples = runner.run(samples)
                 
-                # 保存推理结果
+                # Save inference results
                 all_samples[dataset_name] = samples
         
-        # 第二阶段：评估（模型引擎已关闭，可以安全使用TensorFlow/BLEURT）
+        # Phase 2: Evaluation (model engine closed, safe to use TensorFlow/BLEURT)
         print("\n" + "=" * 60)
-        print("第二阶段：结果评估")
+        print("Phase 2: Results Evaluation")
         print("=" * 60)
         
         for dataset_name, samples in all_samples.items():
-            print(f"\n正在评估 {dataset_name.upper()} 数据集...")
+            print(f"\nEvaluating {dataset_name.upper()} dataset...")
             
-            # 评估结果
+            # Evaluate results
             results = evaluate_dataset(dataset_name, samples)
             results["model_name"] = args.model_name
             results["timestamp"] = datetime.now().isoformat()
             
-            # 保存结果
+            # Save results
             save_results(
                 results=results,
                 output_dir=args.output_dir,
@@ -150,7 +150,7 @@ def main():
                 temperature=args.temperature
             )
             
-            # 保存预测结果
+            # Save predictions
             save_predictions(
                 samples=samples,
                 output_dir=args.output_dir,
@@ -161,24 +161,23 @@ def main():
             
             all_results[dataset_name] = results
         
-        # 打印最终结果摘要
+        # Print final results summary
         print_summary(all_results)
         
     except KeyboardInterrupt:
-        print("\n用户中断，正在退出...")
+        print("\nUser interrupted, exiting...")
         sys.exit(1)
     except Exception as e:
-        print(f"\n错误: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
     
-    # 打印总耗时
+    # Print total time
     total_time = time.time() - start_time
-    print(f"\n总耗时: {total_time:.2f}秒 ({total_time/60:.2f}分钟)")
-    print(f"结束时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\nTotal time: {total_time:.2f}s ({total_time/60:.2f}min)")
+    print(f"End time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 if __name__ == "__main__":
     main()
-

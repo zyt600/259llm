@@ -1,6 +1,6 @@
 """
-推理模块 - 使用SGLang或llama.cpp进行批量推理
-支持多GPU并行推理和Server模式并发推理
+Inference module - Batch inference using SGLang or llama.cpp
+Supports multi-GPU parallel inference and Server mode concurrent inference
 """
 from typing import List, Dict, Optional, Tuple
 import time
@@ -31,13 +31,13 @@ console = Console()
 
 def _send_request_to_server(args):
     """
-    发送单个请求到llama.cpp server (OpenAI兼容API)
+    Send single request to llama.cpp server (OpenAI compatible API)
     
     Args:
         args: (idx, prompt, server_url, temperature, max_tokens)
     
     Returns:
-        (idx, output_text, success) - success 表示请求是否成功
+        (idx, output_text, success) - success indicates if request was successful
     """
     idx, prompt, server_url, temperature, max_tokens = args
     
@@ -51,18 +51,18 @@ def _send_request_to_server(args):
                 "top_p": 1.0 if temperature == 0 else 0.95,
                 "stream": False
             },
-            timeout=600  # 10分钟超时
+            timeout=600  # 10 minute timeout
         )
         response.raise_for_status()
         result = response.json()
-        # OpenAI格式的响应
+        # OpenAI format response
         if "choices" in result and len(result["choices"]) > 0:
             text = result["choices"][0].get("text", "")
         else:
             text = ""
         return (idx, text, True)
     except Exception as e:
-        print(f"\n请求错误 (idx={idx}, server={server_url}): {e}")
+        print(f"\nRequest error (idx={idx}, server={server_url}): {e}")
         return (idx, "", False)
 
 
@@ -76,20 +76,20 @@ def batch_inference_llama_cpp_server(
     show_progress: bool = True
 ) -> List[str]:
     """
-    使用llama.cpp server模式进行并发推理
-    在每个GPU上启动多个server实例，实现真正的并行处理
+    Concurrent inference using llama.cpp server mode
+    Launches multiple server instances on each GPU for true parallel processing
     
     Args:
-        model_path: 模型路径或HuggingFace仓库名
-        prompts: 输入prompt列表
-        gpu_ids: GPU ID列表
-        temperature: 采样温度
-        max_tokens: 最大生成token数
-        servers_per_gpu: 每个GPU启动的server数量（需要足够显存）
-        show_progress: 是否显示进度条
+        model_path: Model path or HuggingFace repo name
+        prompts: Input prompt list
+        gpu_ids: GPU ID list
+        temperature: Sampling temperature
+        max_tokens: Maximum tokens to generate
+        servers_per_gpu: Number of servers per GPU (requires sufficient VRAM)
+        show_progress: Whether to show progress bar
         
     Returns:
-        List[str]: 生成的文本列表（保持原始顺序）
+        List[str]: Generated text list (maintains original order)
     """
     from huggingface_hub import hf_hub_download
     import glob
@@ -98,51 +98,51 @@ def batch_inference_llama_cpp_server(
     num_gpus = len(gpu_ids)
     total_servers = num_gpus * servers_per_gpu
     
-    print(f"\n[Server模式] 使用 {num_gpus} 个GPU: {gpu_ids}")
-    print(f"  每GPU {servers_per_gpu} 个server实例, 总共 {total_servers} 个server")
+    print(f"\n[Server mode] Using {num_gpus} GPUs: {gpu_ids}")
+    print(f"  {servers_per_gpu} server instances per GPU, {total_servers} servers total")
     
-    # 检查是否需要下载模型
+    # Check if model needs to be downloaded
     if os.path.exists(model_path):
         gguf_path = model_path
     else:
-        # 从HuggingFace下载
-        print(f"  从HuggingFace下载模型...")
+        # Download from HuggingFace
+        print(f"  Downloading model from HuggingFace...")
         
-        # 检查是否是包含文件名的路径（如 unsloth/Qwen3-1.7B-Q4_0.gguf）
-        # 如果是，尝试从对应的GGUF仓库下载
+        # Check if path contains filename (e.g. unsloth/Qwen3-1.7B-Q4_0.gguf)
+        # If so, try to download from corresponding GGUF repo
         if model_path.endswith('.gguf') and '/' in model_path:
-            # 提取文件名和可能的仓库名
-            # 例如: unsloth/Qwen3-1.7B-Q4_0.gguf
-            # 应该映射到: 仓库 unsloth/Qwen3-1.7B-GGUF, 文件 Qwen3-1.7B-Q4_0.gguf
+            # Extract filename and possible repo name
+            # e.g.: unsloth/Qwen3-1.7B-Q4_0.gguf
+            # Should map to: repo unsloth/Qwen3-1.7B-GGUF, file Qwen3-1.7B-Q4_0.gguf
             parts = model_path.rsplit('/', 1)
             if len(parts) == 2:
-                org_part = parts[0]  # 如 unsloth
-                filename_part = parts[1]   # 如 Qwen3-1.7B-Q4_0.gguf
+                org_part = parts[0]  # e.g. unsloth
+                filename_part = parts[1]   # e.g. Qwen3-1.7B-Q4_0.gguf
                 
-                # 从文件名中提取基础模型名（去掉量化后缀）
-                # 例如: 
+                # Extract base model name from filename (remove quantization suffix)
+                # e.g.: 
                 #   Qwen3-1.7B-Q4_0.gguf -> Qwen3-1.7B
                 #   Qwen3-1.7B-Q8_K_XL.gguf -> Qwen3-1.7B
                 #   Qwen3-1.7B-UD-Q8_K_XL.gguf -> Qwen3-1.7B-UD
-                # 量化后缀格式: -Q4_0, -Q4_K_M, -Q8_K_XL, -UD-Q8_K_XL 等
+                # Quantization suffix format: -Q4_0, -Q4_K_M, -Q8_K_XL, -UD-Q8_K_XL etc.
                 
-                # 特殊处理：如果文件名包含 -UD-，先提取 UD 部分
+                # Special handling: if filename contains -UD-, extract UD part first
                 base = filename_part.replace('.gguf', '')
                 if '-UD-' in base:
-                    # 例如: Qwen3-1.7B-UD-Q8_K_XL -> Qwen3-1.7B-UD
+                    # e.g.: Qwen3-1.7B-UD-Q8_K_XL -> Qwen3-1.7B-UD
                     base_model_name = base.rsplit('-UD-', 1)[0] + '-UD'
                 else:
-                    # 匹配常见的量化后缀模式
+                    # Match common quantization suffix patterns
                     patterns = [
-                        # 匹配 Q8_K_XL, Q4_K_M 等格式（包含多个下划线部分）
+                        # Match Q8_K_XL, Q4_K_M etc. format (with multiple underscore parts)
                         r'^(.+?)-(Q\d+(_[KM])+(_[A-Z]+)?)\.gguf$',
-                        # 匹配 Q4_0, Q8_0 等简单格式
+                        # Match Q4_0, Q8_0 etc. simple format
                         r'^(.+?)-(Q\d+_\d+)\.gguf$',
-                        # 匹配 Q4_K, Q8_M 等格式
+                        # Match Q4_K, Q8_M etc. format
                         r'^(.+?)-(Q\d+_[KM])\.gguf$',
-                        # 匹配 Q4, Q8 等格式
+                        # Match Q4, Q8 etc. format
                         r'^(.+?)-(Q\d+[KM]?)\.gguf$',
-                        # 匹配 BF16, F16, IQ4_XS 等格式
+                        # Match BF16, F16, IQ4_XS etc. format
                         r'^(.+?)-(BF16|F16|IQ4_[NX]S?)\.gguf$',
                     ]
                     
@@ -154,21 +154,21 @@ def batch_inference_llama_cpp_server(
                             break
                     
                     if base_model_name is None:
-                        # 如果无法匹配，尝试去掉最后的 -xxx 部分
+                        # If no pattern matches, try removing last -xxx part
                         if '-' in base:
                             base_model_name = base.rsplit('-', 1)[0]
                         else:
                             base_model_name = base
                 
-                # 构建可能的仓库名
-                # 对于 UD 版本（如 Qwen3-1.7B-UD），使用去掉 -UD 的基础模型名来构建仓库
-                # 因为 UD 版本通常也在同一个 GGUF 仓库中
+                # Build possible repo names
+                # For UD versions (e.g. Qwen3-1.7B-UD), use base model name without -UD to build repo
+                # Because UD versions are usually in the same GGUF repo
                 repo_base_model = base_model_name
                 if base_model_name.endswith('-UD'):
-                    repo_base_model = base_model_name[:-3]  # 去掉 -UD
+                    repo_base_model = base_model_name[:-3]  # Remove -UD
                 
-                # 策略1: {org}/{base_model}-GGUF (如 unsloth/Qwen3-1.7B-GGUF)
-                # 策略2: {org}/{base_model} (如 unsloth/Qwen3-1.7B)
+                # Strategy 1: {org}/{base_model}-GGUF (e.g. unsloth/Qwen3-1.7B-GGUF)
+                # Strategy 2: {org}/{base_model} (e.g. unsloth/Qwen3-1.7B)
                 possible_repos = [
                     f"{org_part}/{repo_base_model}-GGUF",  # unsloth/Qwen3-1.7B-GGUF
                     f"{org_part}/{repo_base_model}",  # unsloth/Qwen3-1.7B
@@ -177,17 +177,17 @@ def batch_inference_llama_cpp_server(
                 downloaded = False
                 for repo_id in possible_repos:
                     try:
-                        # 先尝试下载指定的文件名
+                        # First try downloading specified filename
                         gguf_path = hf_hub_download(
                             repo_id=repo_id,
                             filename=filename_part,
                             local_dir="./models_cache"
                         )
                         downloaded = True
-                        print(f"  从仓库 {repo_id} 下载文件 {filename_part}")
+                        print(f"  Downloaded file {filename_part} from repo {repo_id}")
                         break
                     except Exception as e:
-                        # 如果指定文件不存在，尝试下载默认的Q4_K_M版本（仅对-GGUF仓库）
+                        # If specified file doesn't exist, try downloading default Q4_K_M version (only for -GGUF repos)
                         if repo_id.endswith('-GGUF'):
                             try:
                                 gguf_path = hf_hub_download(
@@ -196,28 +196,28 @@ def batch_inference_llama_cpp_server(
                                     local_dir="./models_cache"
                                 )
                                 downloaded = True
-                                print(f"  从仓库 {repo_id} 下载默认Q4_K_M版本（文件 {filename_part} 不存在）")
+                                print(f"  Downloaded default Q4_K_M version from repo {repo_id} (file {filename_part} not found)")
                                 break
                             except:
                                 continue
                         continue
                 
                 if not downloaded:
-                    raise ValueError(f"无法从 {possible_repos} 下载模型文件 {filename_part}")
+                    raise ValueError(f"Cannot download model file {filename_part} from {possible_repos}")
             else:
-                # 如果解析失败，按原逻辑处理
-                raise ValueError(f"无法解析模型路径: {model_path}")
+                # If parsing fails, use original logic
+                raise ValueError(f"Cannot parse model path: {model_path}")
         else:
-            # 原逻辑：作为HuggingFace仓库名处理
+            # Original logic: treat as HuggingFace repo name
             try:
-                # 尝试下载Q4_K_M版本
+                # Try downloading Q4_K_M version
                 gguf_path = hf_hub_download(
                     repo_id=model_path,
                     filename="*Q4_K_M.gguf",
                     local_dir="./models_cache"
                 )
             except:
-                # 列出仓库中的gguf文件并下载第一个
+                # List gguf files in repo and download first one
                 from huggingface_hub import list_repo_files
                 try:
                     files = list_repo_files(model_path)
@@ -231,18 +231,18 @@ def batch_inference_llama_cpp_server(
                             local_dir="./models_cache"
                         )
                     else:
-                        raise ValueError(f"仓库 {model_path} 中没有找到GGUF文件")
+                        raise ValueError(f"No GGUF files found in repo {model_path}")
                 except Exception as e:
-                    raise ValueError(f"无法从HuggingFace下载模型 {model_path}: {e}")
+                    raise ValueError(f"Cannot download model {model_path} from HuggingFace: {e}")
         
-        print(f"  模型下载完成: {gguf_path}")
+        print(f"  Model download complete: {gguf_path}")
     
-    # 启动server进程（每个GPU多个实例）
+    # Start server processes (multiple instances per GPU)
     servers = []
     server_urls = []
     base_port = 8080
     
-    print(f"  启动 {total_servers} 个llama.cpp server...")
+    print(f"  Starting {total_servers} llama.cpp servers...")
     
     server_idx = 0
     for gpu_id in gpu_ids:
@@ -251,11 +251,11 @@ def batch_inference_llama_cpp_server(
             server_url = f"http://localhost:{port}"
             server_urls.append(server_url)
             
-            # 启动server进程
+            # Start server process
             env = os.environ.copy()
             env["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
             
-            # 设置CUDA库路径
+            # Set CUDA library paths
             cuda_lib_paths = [
                 "/usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib",
                 "/usr/local/lib/python3.10/dist-packages/nvidia/cuda_runtime/lib",
@@ -283,51 +283,51 @@ def batch_inference_llama_cpp_server(
                 preexec_fn=os.setsid
             )
             servers.append(proc)
-            print(f"    GPU {gpu_id} #{instance+1}: server启动中 (port={port}, pid={proc.pid})")
+            print(f"    GPU {gpu_id} #{instance+1}: server starting (port={port}, pid={proc.pid})")
             server_idx += 1
     
-    # 等待所有server启动（30B模型需要较长时间）
-    print(f"  等待server就绪（大模型加载需要1-2分钟）...")
-    time.sleep(30)  # 初始等待30秒
+    # Wait for all servers to start (large models need longer time)
+    print(f"  Waiting for servers to be ready (large models may take 1-2 minutes)...")
+    time.sleep(30)  # Initial wait 30 seconds
     
-    # 检查server是否就绪（使用/v1/models端点）
+    # Check if servers are ready (using /v1/models endpoint)
     for i, server_url in enumerate(server_urls):
         gpu_idx = i // servers_per_gpu
         instance_idx = i % servers_per_gpu
-        for retry in range(120):  # 最多等120秒
+        for retry in range(120):  # Wait up to 120 seconds
             try:
                 resp = requests.get(f"{server_url}/v1/models", timeout=5)
                 if resp.status_code == 200:
-                    print(f"    GPU {gpu_ids[gpu_idx]} #{instance_idx+1}: server就绪")
+                    print(f"    GPU {gpu_ids[gpu_idx]} #{instance_idx+1}: server ready")
                     break
             except:
                 pass
             time.sleep(1)
         else:
-            print(f"    GPU {gpu_ids[gpu_idx]} #{instance_idx+1}: server启动超时，继续尝试...")
+            print(f"    GPU {gpu_ids[gpu_idx]} #{instance_idx+1}: server start timeout, continuing...")
     
     start_time = time.time()
     
-    # 动态分配模式：使用队列，空闲server自动取任务
-    # 任务格式: (idx, prompt, retry_count)
+    # Dynamic allocation mode: use queue, idle servers automatically take tasks
+    # Task format: (idx, prompt, retry_count)
     task_queue = queue.Queue()
     for idx, prompt in enumerate(prompts):
-        task_queue.put((idx, prompt, 0))  # 初始重试次数为0
+        task_queue.put((idx, prompt, 0))  # Initial retry count is 0
     
     all_results = []
     completed_count = 0
-    failed_count = 0  # 跟踪最终失败的任务数
+    failed_count = 0  # Track final failed task count
     lock = Lock()
     results_lock = Lock()
     
-    # Server健康状态跟踪
+    # Server health tracking
     server_healthy = {url: True for url in server_urls}
     server_healthy_lock = Lock()
     
-    MAX_RETRIES = 3  # 最大重试次数
+    MAX_RETRIES = 3  # Maximum retry count
     
     def check_server_health(server_url):
-        """检查server是否健康"""
+        """Check if server is healthy"""
         try:
             resp = requests.get(f"{server_url}/v1/models", timeout=2)
             return resp.status_code == 200
@@ -335,7 +335,7 @@ def batch_inference_llama_cpp_server(
             return False
     
     def get_healthy_server():
-        """获取一个健康的server URL"""
+        """Get a healthy server URL"""
         with server_healthy_lock:
             for url, healthy in server_healthy.items():
                 if healthy:
@@ -343,7 +343,7 @@ def batch_inference_llama_cpp_server(
         return None
     
     def worker(server_url, server_id):
-        """Worker线程：从队列取任务，处理完再取下一个，失败时重试"""
+        """Worker thread: take task from queue, process it, then take next one, retry on failure"""
         nonlocal completed_count, failed_count
         current_server = server_url
         consecutive_failures = 0
@@ -354,44 +354,44 @@ def batch_inference_llama_cpp_server(
             except queue.Empty:
                 break
             
-            # 如果当前server连续失败多次，检查健康状态
+            # If current server has consecutive failures, check health
             if consecutive_failures >= 2:
                 if not check_server_health(current_server):
                     with server_healthy_lock:
                         server_healthy[current_server] = False
-                    print(f"\n  Server {current_server} 标记为不健康")
-                    # 尝试切换到其他健康的server
+                    print(f"\n  Server {current_server} marked as unhealthy")
+                    # Try switching to another healthy server
                     new_server = get_healthy_server()
                     if new_server and new_server != current_server:
-                        print(f"  Worker {server_id} 切换到 {new_server}")
+                        print(f"  Worker {server_id} switching to {new_server}")
                         current_server = new_server
                         consecutive_failures = 0
             
-            # 发送请求
+            # Send request
             idx, text, success = _send_request_to_server((idx, prompt, current_server, temperature, max_tokens))
             
             if success:
-                # 成功：记录结果
+                # Success: record result
                 with results_lock:
                     all_results.append((idx, text))
                 with lock:
                     completed_count += 1
                 consecutive_failures = 0
             else:
-                # 失败：检查重试
+                # Failure: check retry
                 consecutive_failures += 1
                 if retry_count < MAX_RETRIES:
-                    # 还有重试机会，放回队列
+                    # Still have retry chances, put back in queue
                     task_queue.put((idx, prompt, retry_count + 1))
-                    print(f"\n  任务 {idx} 重试 ({retry_count + 1}/{MAX_RETRIES})")
+                    print(f"\n  Task {idx} retrying ({retry_count + 1}/{MAX_RETRIES})")
                 else:
-                    # 超过最大重试次数，记录空结果
+                    # Exceeded max retries, record empty result
                     with results_lock:
                         all_results.append((idx, ""))
                     with lock:
                         completed_count += 1
                         failed_count += 1
-                    print(f"\n  任务 {idx} 达到最大重试次数，标记为失败")
+                    print(f"\n  Task {idx} reached max retries, marked as failed")
             
             task_queue.task_done()
     
@@ -409,31 +409,31 @@ def batch_inference_llama_cpp_server(
             refresh_per_second=2,
         ) as progress:
             task = progress.add_task(
-                f"[cyan]推理进度 ({total_servers}个server并行)", 
+                f"[cyan]Inference progress ({total_servers} servers parallel)", 
                 total=total_samples
             )
             
-            # 启动worker线程（每个server一个）
+            # Start worker threads (one per server)
             threads = []
             for i, server_url in enumerate(server_urls):
                 t = Thread(target=worker, args=(server_url, i))
                 t.start()
                 threads.append(t)
             
-            # 更新进度直到完成
+            # Update progress until complete
             while completed_count < total_samples:
                 progress.update(task, completed=completed_count)
                 time.sleep(0.5)
             
             progress.update(task, completed=total_samples)
             
-            # 等待所有线程完成
+            # Wait for all threads to complete
             for t in threads:
                 t.join()
     
     finally:
-        # 关闭所有server
-        print(f"\n  关闭server...")
+        # Shutdown all servers
+        print(f"\n  Shutting down servers...")
         for proc in servers:
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
@@ -446,21 +446,21 @@ def batch_inference_llama_cpp_server(
             except:
                 pass
     
-    # 按原始索引排序，恢复顺序
+    # Sort by original index, restore order
     all_results.sort(key=lambda x: x[0])
     outputs = [text for idx, text in all_results]
     
     elapsed_time = time.time() - start_time
     
-    console.print(f"\n[bold green]✓ Server模式推理完成！[/bold green]")
-    console.print(f"  总样本数: [cyan]{total_samples}[/cyan]")
-    console.print(f"  使用GPU数: [cyan]{num_gpus}[/cyan]")
-    console.print(f"  每GPU server数: [cyan]{servers_per_gpu}[/cyan]")
-    console.print(f"  总server数: [cyan]{total_servers}[/cyan]")
-    console.print(f"  总耗时: [cyan]{elapsed_time:.2f}[/cyan] 秒")
-    console.print(f"  平均速度: [cyan]{total_samples/elapsed_time:.2f}[/cyan] 样本/秒")
+    console.print(f"\n[bold green]✓ Server mode inference complete![/bold green]")
+    console.print(f"  Total samples: [cyan]{total_samples}[/cyan]")
+    console.print(f"  GPUs used: [cyan]{num_gpus}[/cyan]")
+    console.print(f"  Servers per GPU: [cyan]{servers_per_gpu}[/cyan]")
+    console.print(f"  Total servers: [cyan]{total_servers}[/cyan]")
+    console.print(f"  Total time: [cyan]{elapsed_time:.2f}[/cyan] seconds")
+    console.print(f"  Average speed: [cyan]{total_samples/elapsed_time:.2f}[/cyan] samples/sec")
     if failed_count > 0:
-        console.print(f"  [bold red]失败任务数: {failed_count}[/bold red] (已达最大重试次数)")
+        console.print(f"  [bold red]Failed tasks: {failed_count}[/bold red] (reached max retries)")
     
     return outputs
 
@@ -469,27 +469,27 @@ def _worker_inference_llama_cpp(
     args: Tuple[int, str, List[Tuple[int, str]], float, int, any]
 ) -> List[Tuple[int, str]]:
     """
-    单个GPU上的worker进程，执行llama.cpp推理
+    Worker process on single GPU, performs llama.cpp inference
     
     Args:
         args: (gpu_id, model_path, indexed_prompts, temperature, max_tokens, progress_queue)
               indexed_prompts: [(original_index, prompt), ...]
-              progress_queue: 进度队列，用于报告进度
+              progress_queue: Progress queue for reporting progress
     
     Returns:
         List[(original_index, output_text), ...]
     """
     gpu_id, model_path, indexed_prompts, temperature, max_tokens, progress_queue = args
     
-    # 设置当前进程只使用指定的GPU
+    # Set current process to only use specified GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     
     try:
         from llama_cpp import Llama
     except ImportError:
-        raise ImportError("llama-cpp-python未安装")
+        raise ImportError("llama-cpp-python not installed")
     
-    # 判断是本地文件还是HuggingFace仓库
+    # Check if local file or HuggingFace repo
     is_local_file = os.path.exists(model_path) or model_path.endswith('.gguf')
     
     if is_local_file and os.path.exists(model_path):
@@ -530,11 +530,11 @@ def _worker_inference_llama_cpp(
         
         results.append((idx, text))
         
-        # 报告进度
+        # Report progress
         if progress_queue is not None:
             progress_queue.put((gpu_id, 1))
     
-    # 清理模型
+    # Cleanup model
     del model
     
     return results
@@ -542,7 +542,7 @@ def _worker_inference_llama_cpp(
 
 def _progress_listener(progress_queue, total_samples, num_gpus, gpu_ids):
     """
-    进度监听线程，从队列读取进度并更新显示
+    Progress listener thread, reads progress from queue and updates display
     """
     completed = {gpu_id: 0 for gpu_id in gpu_ids}
     total_completed = 0
@@ -559,7 +559,7 @@ def _progress_listener(progress_queue, total_samples, num_gpus, gpu_ids):
         console=console,
         refresh_per_second=2,
     ) as progress:
-        task = progress.add_task(f"[cyan]推理进度 ({num_gpus}GPU并行)", total=total_samples)
+        task = progress.add_task(f"[cyan]Inference progress ({num_gpus}GPU parallel)", total=total_samples)
         
         while total_completed < total_samples:
             try:
@@ -568,7 +568,7 @@ def _progress_listener(progress_queue, total_samples, num_gpus, gpu_ids):
                 total_completed = sum(completed.values())
                 progress.update(task, completed=total_completed)
             except:
-                # 超时，继续等待
+                # Timeout, continue waiting
                 pass
     
     return total_completed
@@ -584,21 +584,21 @@ def batch_inference_llama_cpp_parallel(
     use_server_mode: bool = True
 ) -> List[str]:
     """
-    使用多GPU并行进行llama.cpp推理
+    Multi-GPU parallel llama.cpp inference
     
     Args:
-        model_path: 模型路径或HuggingFace仓库名
-        prompts: 输入prompt列表
-        gpu_ids: GPU ID列表
-        temperature: 采样温度
-        max_tokens: 最大生成token数
-        show_progress: 是否显示进度条
-        use_server_mode: 是否使用server模式（推荐，更快）
+        model_path: Model path or HuggingFace repo name
+        prompts: Input prompt list
+        gpu_ids: GPU ID list
+        temperature: Sampling temperature
+        max_tokens: Maximum tokens to generate
+        show_progress: Whether to show progress bar
+        use_server_mode: Whether to use server mode (recommended, faster)
         
     Returns:
-        List[str]: 生成的文本列表（保持原始顺序）
+        List[str]: Generated text list (maintains original order)
     """
-    # 默认使用server模式，更快
+    # Default to server mode, faster
     if use_server_mode:
         return batch_inference_llama_cpp_server(
             model_path=model_path,
@@ -606,46 +606,46 @@ def batch_inference_llama_cpp_parallel(
             gpu_ids=gpu_ids,
             temperature=temperature,
             max_tokens=max_tokens,
-            servers_per_gpu=2,  # 每个GPU启动2个server实例
+            servers_per_gpu=2,  # 2 server instances per GPU
             show_progress=show_progress
         )
     
-    # 备用：多进程模式
+    # Fallback: multi-process mode
     total_samples = len(prompts)
     num_gpus = len(gpu_ids)
     
-    print(f"\n[多GPU并行] 使用 {num_gpus} 个GPU: {gpu_ids}")
+    print(f"\n[Multi-GPU parallel] Using {num_gpus} GPUs: {gpu_ids}")
     
-    # 为每个prompt添加索引，以便后续恢复顺序
+    # Add index to each prompt for later order restoration
     indexed_prompts = list(enumerate(prompts))
     
-    # 将prompts均匀分配到各个GPU
+    # Distribute prompts evenly to GPUs
     chunks = [[] for _ in range(num_gpus)]
     for i, (idx, prompt) in enumerate(indexed_prompts):
         chunks[i % num_gpus].append((idx, prompt))
     
-    # 打印分配情况
+    # Print distribution
     for i, gpu_id in enumerate(gpu_ids):
-        print(f"  GPU {gpu_id}: {len(chunks[i])} 个样本")
+        print(f"  GPU {gpu_id}: {len(chunks[i])} samples")
     
     start_time = time.time()
     
-    # 使用spawn方式创建进程，避免CUDA上下文问题
+    # Use spawn to create processes, avoid CUDA context issues
     ctx = mp.get_context('spawn')
     
-    # 创建进度队列
+    # Create progress queue
     progress_queue = ctx.Manager().Queue()
     
-    # 准备worker参数（添加进度队列）
+    # Prepare worker arguments (add progress queue)
     worker_args = [
         (gpu_ids[i], model_path, chunks[i], temperature, max_tokens, progress_queue)
         for i in range(num_gpus)
     ]
     
-    # 使用进程池并行执行
+    # Use process pool for parallel execution
     all_results = []
     
-    # 启动进度监听线程
+    # Start progress listener thread
     progress_thread = Thread(
         target=_progress_listener,
         args=(progress_queue, total_samples, num_gpus, gpu_ids),
@@ -663,23 +663,23 @@ def batch_inference_llama_cpp_parallel(
                 results = future.result()
                 all_results.extend(results)
             except Exception as e:
-                print(f"\n  GPU {gpu_ids[gpu_idx]} 错误: {e}")
+                print(f"\n  GPU {gpu_ids[gpu_idx]} error: {e}")
                 raise
     
-    # 等待进度线程结束
+    # Wait for progress thread to finish
     progress_thread.join(timeout=2)
     
-    # 按原始索引排序，恢复顺序
+    # Sort by original index, restore order
     all_results.sort(key=lambda x: x[0])
     outputs = [text for idx, text in all_results]
     
     elapsed_time = time.time() - start_time
     
-    console.print(f"\n[bold green]✓ 多GPU并行推理完成！[/bold green]")
-    console.print(f"  总样本数: [cyan]{total_samples}[/cyan]")
-    console.print(f"  使用GPU数: [cyan]{num_gpus}[/cyan]")
-    console.print(f"  总耗时: [cyan]{elapsed_time:.2f}[/cyan] 秒")
-    console.print(f"  平均速度: [cyan]{total_samples/elapsed_time:.2f}[/cyan] 样本/秒")
+    console.print(f"\n[bold green]✓ Multi-GPU parallel inference complete![/bold green]")
+    console.print(f"  Total samples: [cyan]{total_samples}[/cyan]")
+    console.print(f"  GPUs used: [cyan]{num_gpus}[/cyan]")
+    console.print(f"  Total time: [cyan]{elapsed_time:.2f}[/cyan] seconds")
+    console.print(f"  Average speed: [cyan]{total_samples/elapsed_time:.2f}[/cyan] samples/sec")
     
     return outputs
 
@@ -692,17 +692,17 @@ def batch_inference_sglang(
     show_progress: bool = True
 ) -> List[str]:
     """
-    使用SGLang引擎进行批量推理
+    Batch inference using SGLang engine
     
     Args:
-        engine: SGLang引擎实例
-        prompts: 输入prompt列表
-        temperature: 采样温度
-        batch_size: 批处理大小
-        show_progress: 是否显示进度条
+        engine: SGLang engine instance
+        prompts: Input prompt list
+        temperature: Sampling temperature
+        batch_size: Batch size
+        show_progress: Whether to show progress bar
         
     Returns:
-        List[str]: 生成的文本列表
+        List[str]: Generated text list
     """
     import sglang as sgl
     
@@ -710,7 +710,7 @@ def batch_inference_sglang(
     total_samples = len(prompts)
     total_batches = (total_samples + batch_size - 1) // batch_size
     
-    # 设置采样参数（不限制max_new_tokens）
+    # Set sampling parameters (don't limit max_new_tokens)
     sampling_params = {
         "temperature": temperature,
     }
@@ -721,7 +721,7 @@ def batch_inference_sglang(
     
     start_time = time.time()
     
-    # 使用rich进度条
+    # Use rich progress bar
     with Progress(
         SpinnerColumn(),
         TextColumn("[bold blue]{task.description}"),
@@ -735,19 +735,19 @@ def batch_inference_sglang(
         refresh_per_second=2,
     ) as progress:
         
-        task = progress.add_task("[cyan]推理进度 (SGLang)", total=total_samples)
+        task = progress.add_task("[cyan]Inference progress (SGLang)", total=total_samples)
         
         for i in range(0, total_samples, batch_size):
             batch_prompts = prompts[i:i + batch_size]
             current_batch_size = len(batch_prompts)
             
-            # 使用SGLang进行批量推理
+            # Batch inference using SGLang
             outputs = engine.generate(
                 batch_prompts,
                 sampling_params=sampling_params
             )
             
-            # 提取生成的文本
+            # Extract generated text
             for output in outputs:
                 if hasattr(output, 'text'):
                     all_outputs.append(output.text)
@@ -756,15 +756,15 @@ def batch_inference_sglang(
                 else:
                     all_outputs.append(str(output))
             
-            # 更新进度
+            # Update progress
             progress.update(task, advance=current_batch_size)
     
     elapsed_time = time.time() - start_time
     
-    console.print(f"\n[bold green]✓ 推理完成！[/bold green]")
-    console.print(f"  总样本数: [cyan]{total_samples}[/cyan]")
-    console.print(f"  总耗时: [cyan]{elapsed_time:.2f}[/cyan] 秒")
-    console.print(f"  平均速度: [cyan]{total_samples/elapsed_time:.2f}[/cyan] 样本/秒")
+    console.print(f"\n[bold green]✓ Inference complete![/bold green]")
+    console.print(f"  Total samples: [cyan]{total_samples}[/cyan]")
+    console.print(f"  Total time: [cyan]{elapsed_time:.2f}[/cyan] seconds")
+    console.print(f"  Average speed: [cyan]{total_samples/elapsed_time:.2f}[/cyan] samples/sec")
     
     return all_outputs
 
@@ -777,24 +777,24 @@ def batch_inference_llama_cpp(
     show_progress: bool = True
 ) -> List[str]:
     """
-    使用llama.cpp进行批量推理
+    Batch inference using llama.cpp
     
     Args:
-        model: llama-cpp-python模型实例
-        prompts: 输入prompt列表
-        temperature: 采样温度
-        max_tokens: 最大生成token数
-        show_progress: 是否显示进度条
+        model: llama-cpp-python model instance
+        prompts: Input prompt list
+        temperature: Sampling temperature
+        max_tokens: Maximum tokens to generate
+        show_progress: Whether to show progress bar
         
     Returns:
-        List[str]: 生成的文本列表
+        List[str]: Generated text list
     """
     all_outputs = []
     total_samples = len(prompts)
     
     start_time = time.time()
     
-    # 使用rich进度条
+    # Use rich progress bar
     with Progress(
         SpinnerColumn(),
         TextColumn("[bold blue]{task.description}"),
@@ -808,11 +808,11 @@ def batch_inference_llama_cpp(
         refresh_per_second=2,
     ) as progress:
         
-        task = progress.add_task("[cyan]推理进度 (llama.cpp)", total=total_samples)
+        task = progress.add_task("[cyan]Inference progress (llama.cpp)", total=total_samples)
         
         for prompt in prompts:
-            # 使用llama.cpp进行单个推理
-            # max_tokens: 0表示不限制，但这里设置合理默认值避免无限生成
+            # Single inference using llama.cpp
+            # max_tokens: 0 means unlimited, but set reasonable default to avoid infinite generation
             actual_max_tokens = max_tokens if max_tokens > 0 else 512
             output = model(
                 prompt,
@@ -820,10 +820,10 @@ def batch_inference_llama_cpp(
                 temperature=temperature if temperature > 0 else 0.0,
                 top_p=1.0 if temperature == 0 else 0.95,
                 top_k=1 if temperature == 0 else 40,
-                echo=False  # 不返回prompt
+                echo=False  # Don't return prompt
             )
             
-            # 提取生成的文本
+            # Extract generated text
             if isinstance(output, dict) and 'choices' in output:
                 text = output['choices'][0].get('text', '')
             else:
@@ -831,15 +831,15 @@ def batch_inference_llama_cpp(
             
             all_outputs.append(text)
             
-            # 更新进度
+            # Update progress
             progress.update(task, advance=1)
     
     elapsed_time = time.time() - start_time
     
-    console.print(f"\n[bold green]✓ 推理完成！[/bold green]")
-    console.print(f"  总样本数: [cyan]{total_samples}[/cyan]")
-    console.print(f"  总耗时: [cyan]{elapsed_time:.2f}[/cyan] 秒")
-    console.print(f"  平均速度: [cyan]{total_samples/elapsed_time:.2f}[/cyan] 样本/秒")
+    console.print(f"\n[bold green]✓ Inference complete![/bold green]")
+    console.print(f"  Total samples: [cyan]{total_samples}[/cyan]")
+    console.print(f"  Total time: [cyan]{elapsed_time:.2f}[/cyan] seconds")
+    console.print(f"  Average speed: [cyan]{total_samples/elapsed_time:.2f}[/cyan] samples/sec")
     
     return all_outputs
 
@@ -856,24 +856,24 @@ def batch_inference(
     gpu_ids: List[int] = None
 ) -> List[str]:
     """
-    统一的批量推理接口，根据后端类型选择对应的推理方法
+    Unified batch inference interface, selects inference method based on backend type
     
     Args:
-        engine: 模型引擎实例 (SGLang Engine 或 llama-cpp-python Llama)
-        prompts: 输入prompt列表
-        temperature: 采样温度
-        batch_size: 批处理大小 (仅SGLang使用)
-        show_progress: 是否显示进度条
-        backend: 后端类型 ("sglang" 或 "llama_cpp")
-        max_tokens: 最大生成token数 (仅llama.cpp使用)
-        model_path: 模型路径 (多GPU并行时使用)
-        gpu_ids: GPU ID列表 (多GPU并行时使用)
+        engine: Model engine instance (SGLang Engine or llama-cpp-python Llama)
+        prompts: Input prompt list
+        temperature: Sampling temperature
+        batch_size: Batch size (SGLang only)
+        show_progress: Whether to show progress bar
+        backend: Backend type ("sglang" or "llama_cpp")
+        max_tokens: Maximum tokens to generate (llama.cpp only)
+        model_path: Model path (for multi-GPU parallel)
+        gpu_ids: GPU ID list (for multi-GPU parallel)
         
     Returns:
-        List[str]: 生成的文本列表
+        List[str]: Generated text list
     """
     if backend == "llama_cpp":
-        # 如果指定了多个GPU，使用并行推理
+        # If multiple GPUs specified, use parallel inference
         if gpu_ids and len(gpu_ids) > 1 and model_path:
             return batch_inference_llama_cpp_parallel(
                 model_path=model_path,
@@ -913,26 +913,26 @@ def run_inference_on_dataset(
     gpu_ids: List[int] = None
 ) -> List[Dict]:
     """
-    在数据集上运行推理
+    Run inference on dataset
     
     Args:
-        engine: 模型引擎实例
-        samples: 数据样本列表
-        temperature: 采样温度
-        batch_size: 批处理大小
-        prompt_key: prompt在样本中的键名
-        backend: 后端类型 ("sglang" 或 "llama_cpp")
-        max_tokens: 最大生成token数 (仅llama.cpp使用)
-        model_path: 模型路径 (多GPU并行时使用)
-        gpu_ids: GPU ID列表 (多GPU并行时使用)
+        engine: Model engine instance
+        samples: Data sample list
+        temperature: Sampling temperature
+        batch_size: Batch size
+        prompt_key: Key name for prompt in samples
+        backend: Backend type ("sglang" or "llama_cpp")
+        max_tokens: Maximum tokens to generate (llama.cpp only)
+        model_path: Model path (for multi-GPU parallel)
+        gpu_ids: GPU ID list (for multi-GPU parallel)
         
     Returns:
-        List[Dict]: 带有预测结果的样本列表
+        List[Dict]: Sample list with prediction results
     """
-    # 提取所有prompt
+    # Extract all prompts
     prompts = [sample[prompt_key] for sample in samples]
     
-    # 批量推理
+    # Batch inference
     outputs = batch_inference(
         engine=engine,
         prompts=prompts,
@@ -944,7 +944,7 @@ def run_inference_on_dataset(
         gpu_ids=gpu_ids
     )
     
-    # 将预测结果添加到样本中
+    # Add predictions to samples
     for sample, output in zip(samples, outputs):
         sample["prediction"] = output.strip()
     
@@ -953,7 +953,7 @@ def run_inference_on_dataset(
 
 class InferenceRunner:
     """
-    推理运行器类 - 支持SGLang和llama.cpp后端，支持多GPU并行
+    Inference runner class - Supports SGLang and llama.cpp backends, supports multi-GPU parallel
     """
     
     def __init__(
@@ -967,16 +967,16 @@ class InferenceRunner:
         gpu_ids: List[int] = None
     ):
         """
-        初始化推理运行器
+        Initialize inference runner
         
         Args:
-            engine: 模型引擎实例
-            temperature: 采样温度
-            batch_size: 批处理大小
-            backend: 后端类型 ("sglang" 或 "llama_cpp")
-            max_tokens: 最大生成token数 (仅llama.cpp使用)
-            model_path: 模型路径 (多GPU并行时使用)
-            gpu_ids: GPU ID列表 (多GPU并行时使用)
+            engine: Model engine instance
+            temperature: Sampling temperature
+            batch_size: Batch size
+            backend: Backend type ("sglang" or "llama_cpp")
+            max_tokens: Maximum tokens to generate (llama.cpp only)
+            model_path: Model path (for multi-GPU parallel)
+            gpu_ids: GPU ID list (for multi-GPU parallel)
         """
         self.engine = engine
         self.temperature = temperature
@@ -988,14 +988,14 @@ class InferenceRunner:
         
     def run(self, samples: List[Dict], prompt_key: str = "full_prompt") -> List[Dict]:
         """
-        运行推理
+        Run inference
         
         Args:
-            samples: 数据样本列表
-            prompt_key: prompt键名
+            samples: Data sample list
+            prompt_key: Prompt key name
             
         Returns:
-            List[Dict]: 带预测结果的样本列表
+            List[Dict]: Sample list with prediction results
         """
         return run_inference_on_dataset(
             engine=self.engine,
@@ -1008,170 +1008,3 @@ class InferenceRunner:
             model_path=self.model_path,
             gpu_ids=self.gpu_ids
         )
-
-
-def batch_inference(
-    engine,
-    prompts: List[str],
-    temperature: float = 0.0,
-    batch_size: int = 8,
-    show_progress: bool = True,
-    backend: str = "sglang",
-    max_tokens: int = 2048,
-    model_path: str = None,
-    gpu_ids: List[int] = None
-) -> List[str]:
-    """
-    统一的批量推理接口，根据后端类型选择对应的推理方法
-    
-    Args:
-        engine: 模型引擎实例 (SGLang Engine 或 llama-cpp-python Llama)
-        prompts: 输入prompt列表
-        temperature: 采样温度
-        batch_size: 批处理大小 (仅SGLang使用)
-        show_progress: 是否显示进度条
-        backend: 后端类型 ("sglang" 或 "llama_cpp")
-        max_tokens: 最大生成token数 (仅llama.cpp使用)
-        model_path: 模型路径 (多GPU并行时使用)
-        gpu_ids: GPU ID列表 (多GPU并行时使用)
-        
-    Returns:
-        List[str]: 生成的文本列表
-    """
-    if backend == "llama_cpp":
-        # 如果指定了多个GPU，使用并行推理
-        if gpu_ids and len(gpu_ids) > 1 and model_path:
-            return batch_inference_llama_cpp_parallel(
-                model_path=model_path,
-                prompts=prompts,
-                gpu_ids=gpu_ids,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                show_progress=show_progress
-            )
-        else:
-            return batch_inference_llama_cpp(
-                model=engine,
-                prompts=prompts,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                show_progress=show_progress
-            )
-    else:
-        return batch_inference_sglang(
-            engine=engine,
-            prompts=prompts,
-            temperature=temperature,
-            batch_size=batch_size,
-            show_progress=show_progress
-        )
-
-
-def run_inference_on_dataset(
-    engine,
-    samples: List[Dict],
-    temperature: float = 0.0,
-    batch_size: int = 8,
-    prompt_key: str = "full_prompt",
-    backend: str = "sglang",
-    max_tokens: int = 2048,
-    model_path: str = None,
-    gpu_ids: List[int] = None
-) -> List[Dict]:
-    """
-    在数据集上运行推理
-    
-    Args:
-        engine: 模型引擎实例
-        samples: 数据样本列表
-        temperature: 采样温度
-        batch_size: 批处理大小
-        prompt_key: prompt在样本中的键名
-        backend: 后端类型 ("sglang" 或 "llama_cpp")
-        max_tokens: 最大生成token数 (仅llama.cpp使用)
-        model_path: 模型路径 (多GPU并行时使用)
-        gpu_ids: GPU ID列表 (多GPU并行时使用)
-        
-    Returns:
-        List[Dict]: 带有预测结果的样本列表
-    """
-    # 提取所有prompt
-    prompts = [sample[prompt_key] for sample in samples]
-    
-    # 批量推理
-    outputs = batch_inference(
-        engine=engine,
-        prompts=prompts,
-        temperature=temperature,
-        batch_size=batch_size,
-        backend=backend,
-        max_tokens=max_tokens,
-        model_path=model_path,
-        gpu_ids=gpu_ids
-    )
-    
-    # 将预测结果添加到样本中
-    for sample, output in zip(samples, outputs):
-        sample["prediction"] = output.strip()
-    
-    return samples
-
-
-class InferenceRunner:
-    """
-    推理运行器类 - 支持SGLang和llama.cpp后端，支持多GPU并行
-    """
-    
-    def __init__(
-        self,
-        engine,
-        temperature: float = 0.0,
-        batch_size: int = 8,
-        backend: str = "sglang",
-        max_tokens: int = 2048,
-        model_path: str = None,
-        gpu_ids: List[int] = None
-    ):
-        """
-        初始化推理运行器
-        
-        Args:
-            engine: 模型引擎实例
-            temperature: 采样温度
-            batch_size: 批处理大小
-            backend: 后端类型 ("sglang" 或 "llama_cpp")
-            max_tokens: 最大生成token数 (仅llama.cpp使用)
-            model_path: 模型路径 (多GPU并行时使用)
-            gpu_ids: GPU ID列表 (多GPU并行时使用)
-        """
-        self.engine = engine
-        self.temperature = temperature
-        self.batch_size = batch_size
-        self.backend = backend
-        self.max_tokens = max_tokens
-        self.model_path = model_path
-        self.gpu_ids = gpu_ids
-        
-    def run(self, samples: List[Dict], prompt_key: str = "full_prompt") -> List[Dict]:
-        """
-        运行推理
-        
-        Args:
-            samples: 数据样本列表
-            prompt_key: prompt键名
-            
-        Returns:
-            List[Dict]: 带预测结果的样本列表
-        """
-        return run_inference_on_dataset(
-            engine=self.engine,
-            samples=samples,
-            temperature=self.temperature,
-            batch_size=self.batch_size,
-            prompt_key=prompt_key,
-            backend=self.backend,
-            max_tokens=self.max_tokens,
-            model_path=self.model_path,
-            gpu_ids=self.gpu_ids
-        )
-

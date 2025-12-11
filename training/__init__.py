@@ -1,19 +1,19 @@
 """
-LongBench SFT训练模块
+LongBench SFT Training Module
 
-该模块提供使用LongBench数据集对大语言模型进行监督微调(SFT)的功能。
+This module provides functionality for supervised fine-tuning (SFT) of large language models using LongBench dataset.
 
-主要组件:
-- train_args: 训练参数解析
-- longbench_loader: LongBench数据集加载器
-- trainer: SFT训练器
-- train: 训练主入口
+Main components:
+- train_args: Training argument parsing
+- longbench_loader: LongBench dataset loader
+- trainer: SFT trainer
+- train: Training main entry
 
-使用示例:
-    # 命令行运行
+Usage examples:
+    # Run from command line
     python -m training.train --model_name Qwen/Qwen2-7B-Instruct --use_lora
     
-    # 或直接进入training目录运行
+    # Or run directly from training directory
     cd training && python train.py --model_name Qwen/Qwen2-7B-Instruct --use_lora
 """
 
@@ -38,4 +38,3 @@ __all__ = [
     "SFTTrainer",
     "PeriodicEvalCallback",
 ]
-

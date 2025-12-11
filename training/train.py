@@ -1,27 +1,27 @@
 #!/usr/bin/env python
 """
-LongBench SFT训练主程序
+LongBench SFT Training Main Program
 
-使用方法:
-    python train.py --model_name <模型名称> [--gpu <GPU编号>] [--use_lora]
+Usage:
+    python train.py --model_name <model_name> [--gpu <GPU_IDs>] [--use_lora]
 
-示例:
-    # 全参数微调
+Examples:
+    # Full parameter fine-tuning
     python train.py --model_name Qwen/Qwen2-7B-Instruct --gpu 0,1,2,3
     
-    # LoRA微调（推荐，节省显存）
+    # LoRA fine-tuning (recommended, saves VRAM)
     python train.py --model_name Qwen/Qwen2-7B-Instruct --gpu 0 --use_lora
     
-    # 快速测试
+    # Quick test
     python train.py --model_name Qwen/Qwen2-0.5B-Instruct --gpu 0 --use_lora --max_train_samples 100 --eval_steps 50
 """
 import os
 import sys
 
-# 添加父目录到path
+# Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 抑制TensorFlow日志
+# Suppress TensorFlow logs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
@@ -40,24 +40,24 @@ from longbench_loader import (
 )
 from trainer import SFTTrainer
 
-# 每个数据集的最大样本数
+# Maximum samples per dataset
 MAX_SAMPLES_PER_DATASET = 1300
 
 
 def main():
-    """主函数"""
-    # 解析命令行参数
+    """Main function"""
+    # Parse command line arguments
     args = parse_train_args()
     print_train_args(args)
     
-    # 记录开始时间
+    # Record start time
     start_time = time.time()
-    print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     try:
-        # 第一步：创建训练器
+        # Step 1: Create trainer
         print("\n" + "=" * 60)
-        print("第一步：初始化训练器")
+        print("Step 1: Initialize Trainer")
         print("=" * 60)
         
         trainer = SFTTrainer(
@@ -85,57 +85,57 @@ def main():
             resume_from_checkpoint=args.resume_from_checkpoint,
         )
         
-        # 第二步：加载模型和分词器
+        # Step 2: Load model and tokenizer
         print("\n" + "=" * 60)
-        print("第二步：加载模型和分词器")
+        print("Step 2: Load Model and Tokenizer")
         print("=" * 60)
         
         trainer.load_model_and_tokenizer()
         
-        # 第三步：加载训练数据
+        # Step 3: Load training data
         print("\n" + "=" * 60)
-        print("第三步：加载训练数据")
+        print("Step 3: Load Training Data")
         print("=" * 60)
         
-        # 确定要使用的子集
+        # Determine subsets to use
         use_all_datasets = args.train_dataset_list is None
         
         if use_all_datasets:
-            # 使用所有数据集（包括额外数据集）
+            # Use all datasets (including extra datasets)
             subset_names = ALL_SUBSETS
             extra_subset_names = EXTRA_SUBSET_NAMES
-            print(f"使用 ALL 模式，加载所有数据集")
-            print(f"  基础数据集: {subset_names}")
-            print(f"  额外数据集: {extra_subset_names}")
+            print(f"Using ALL mode, loading all datasets")
+            print(f"  Base datasets: {subset_names}")
+            print(f"  Extra datasets: {extra_subset_names}")
         else:
-            # 检查是否有额外数据集
+            # Check for extra datasets
             subset_names = [s for s in args.train_dataset_list if s not in EXTRA_SUBSET_NAMES]
             extra_subset_names = [s for s in args.train_dataset_list if s in EXTRA_SUBSET_NAMES]
-            print(f"使用指定数据集:")
+            print(f"Using specified datasets:")
             if subset_names:
-                print(f"  基础数据集: {subset_names}")
+                print(f"  Base datasets: {subset_names}")
             if extra_subset_names:
-                print(f"  额外数据集: {extra_subset_names}")
+                print(f"  Extra datasets: {extra_subset_names}")
         
-        print(f"每个数据集最多加载 {MAX_SAMPLES_PER_DATASET} 条数据")
+        print(f"Loading at most {MAX_SAMPLES_PER_DATASET} samples per dataset")
         
-        # 加载基础数据集
+        # Load base datasets
         raw_samples = []
         if subset_names:
             base_samples = load_all_longbench_subsets(
                 subset_names=subset_names,
-                max_samples_per_subset=MAX_SAMPLES_PER_DATASET,  # 每个子集最多1300条
-                max_total_samples=None,  # 不限制总数
+                max_samples_per_subset=MAX_SAMPLES_PER_DATASET,  # Max 1300 per subset
+                max_total_samples=None,  # No total limit
                 shuffle=True,
                 seed=args.seed
             )
             raw_samples.extend(base_samples)
         
-        # 加载额外数据集
+        # Load extra datasets
         if use_all_datasets or extra_subset_names:
             datasets_to_load = extra_subset_names if extra_subset_names else EXTRA_SUBSET_NAMES
             print(f"\n{'='*60}")
-            print("加载额外数据集")
+            print("Loading Extra Datasets")
             print(f"{'='*60}")
             for extra_name in datasets_to_load:
                 extra_samples = load_extra_dataset(
@@ -144,42 +144,42 @@ def main():
                 )
                 raw_samples.extend(extra_samples)
         
-        # 如果指定了最大总样本数，进行截断
+        # If max total samples specified, truncate
         if args.max_train_samples and len(raw_samples) > args.max_train_samples:
             import random
             random.seed(args.seed)
             random.shuffle(raw_samples)
             raw_samples = raw_samples[:args.max_train_samples]
-            print(f"\n限制总样本数为 {args.max_train_samples}")
+            print(f"\nLimited total samples to {args.max_train_samples}")
         
-        print(f"\n总计加载 {len(raw_samples)} 个训练样本")
+        print(f"\nTotal loaded {len(raw_samples)} training samples")
         
-        # 创建SFT数据集
-        print("\n正在创建SFT训练数据集...")
+        # Create SFT dataset
+        print("\nCreating SFT training dataset...")
         train_dataset = create_sft_dataset(
             samples=raw_samples,
             tokenizer=trainer.tokenizer,
             max_length=args.max_length,
-            truncation_side="left"  # 长文本从左边截断，保留最近的内容
+            truncation_side="left"  # Truncate long text from left, keep recent content
         )
         
-        print(f"训练数据集创建完成，共 {len(train_dataset)} 个样本")
+        print(f"Training dataset created, {len(train_dataset)} samples total")
         
-        # 第四步：开始训练
+        # Step 4: Start training
         print("\n" + "=" * 60)
-        print("第四步：开始SFT训练")
+        print("Step 4: Start SFT Training")
         print("=" * 60)
         
         final_results, final_score = trainer.train(train_dataset)
         
-        # 打印最终结果
+        # Print final results
         print("\n" + "=" * 70)
-        print("最终评估结果摘要")
+        print("Final Evaluation Results Summary")
         print("=" * 70)
         
         for dataset_name, results in final_results.items():
             print(f"\n{results.get('dataset', dataset_name)}:")
-            print(f"  样本数量: {results.get('num_samples', 'N/A')}")
+            print(f"  Sample count: {results.get('num_samples', 'N/A')}")
             
             if 'rougeL' in results:
                 print(f"  ROUGE-L: {results.get('rougeL', 0):.4f}")
@@ -188,23 +188,22 @@ def main():
             if 'avg_max_score' in results:
                 print(f"  Avg Max Score: {results.get('avg_max_score', 0):.4f}")
         
-        print(f"\n综合分数 (acc + rougeL + avg_max_score): {final_score:.4f}")
+        print(f"\nCombined score (acc + rougeL + avg_max_score): {final_score:.4f}")
         
     except KeyboardInterrupt:
-        print("\n用户中断训练...")
+        print("\nUser interrupted training...")
         sys.exit(1)
     except Exception as e:
-        print(f"\n训练出错: {e}")
+        print(f"\nTraining error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
     
-    # 打印总耗时
+    # Print total time
     total_time = time.time() - start_time
-    print(f"\n总耗时: {total_time/3600:.2f} 小时")
-    print(f"结束时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\nTotal time: {total_time/3600:.2f} hours")
+    print(f"End time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 if __name__ == "__main__":
     main()
-

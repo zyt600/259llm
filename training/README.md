@@ -1,209 +1,336 @@
-# LongBench SFT训练模块
+# LongBench SFT Training Module
 
-使用LongBench数据集对大语言模型进行监督微调(SFT)的完整训练框架。
+A complete training framework for Supervised Fine-Tuning (SFT) of large language models using the LongBench dataset.
 
-## 功能特点
+## Features
 
-- ✅ 支持加载LongBench所有21个子集用于训练
-- ✅ 支持全参数微调和LoRA高效微调
-- ✅ 定期评估：每隔N步自动运行全量测试
-- ✅ 支持从HuggingFace加载任意模型
-- ✅ 自动保存检查点和评估历史
-- ✅ 支持多GPU训练
+- ✅ Load all 21 LongBench subsets for training
+- ✅ Pure LoRA fine-tuning (memory efficient)
+- ✅ Periodic evaluation on full test sets (TruthfulQA + QMSum)
+- ✅ Support for any HuggingFace model
+- ✅ Automatic checkpoint saving with best model tracking
+- ✅ Multi-GPU training support
+- ✅ SGLang-based inference for evaluation
 
-## LongBench数据集
+## LongBench Dataset
 
-包含21个子集，覆盖多种长文本任务：
+Contains 21 subsets covering various long-context tasks:
 
-| 类别 | 子集 |
-|------|------|
-| 单文档QA | narrativeqa, qasper, multifieldqa_en, multifieldqa_zh |
-| 多文档QA | hotpotqa, 2wikimqa, musique |
-| 摘要 | gov_report, qmsum, multi_news, vcsum |
-| Few-shot学习 | trec, triviaqa, samsum, lsht |
-| 合成任务 | passage_count, passage_retrieval_en, passage_retrieval_zh |
-| 代码 | lcc, repobench-p |
+| Category | Subsets |
+|----------|---------|
+| Single-Doc QA | narrativeqa, qasper, multifieldqa_en, multifieldqa_zh |
+| Multi-Doc QA | hotpotqa, 2wikimqa, musique |
+| Summarization | gov_report, qmsum, multi_news, vcsum |
+| Few-shot Learning | trec, triviaqa, samsum, lsht |
+| Synthetic Tasks | passage_count, passage_retrieval_en, passage_retrieval_zh |
+| Code | lcc, repobench-p |
 
-## 安装依赖
+## Installation
 
 ```bash
 pip install -r requirements.txt
 
-# 可选：安装Flash Attention加速（推荐）
+# Optional: Install Flash Attention for acceleration (recommended)
 pip install flash-attn --no-build-isolation
 ```
 
-## 使用方法
+## Quick Start
 
-### 快速开始（LoRA微调，推荐）
+### Using the Shell Script (Recommended)
+
+The easiest way to start training is using the provided shell script:
+
+```bash
+cd training
+./run_train.sh
+```
+
+You can customize the training by setting environment variables:
+
+```bash
+MODEL_NAME="Qwen/Qwen3-0.6B" \
+GPU="0,1" \
+MAX_STEPS=200 \
+EVAL_STEPS=20 \
+OUTPUT_DIR="./my_output" \
+./run_train.sh
+```
+
+### Using Python Directly
 
 ```bash
 python train.py \
-    --model_name Qwen/Qwen2-7B-Instruct \
-    --gpu 0 \
-    --use_lora \
+    --model_name Qwen/Qwen3-0.6B \
+    --gpu 0,1 \
     --num_epochs 3 \
-    --eval_steps 500
+    --eval_steps 50 \
+    --output_dir ./training_output
 ```
 
-### 全参数微调（需要更多显存）
+## Command Line Arguments
+
+### Model Configuration
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--model_name` | (required) | HuggingFace model name or local path |
+| `--gpu` | all available | GPU IDs to use, comma-separated (e.g., "0,1,2") |
+
+### Training Hyperparameters
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--learning_rate` | 5e-6 | Learning rate (lower values recommended for LoRA) |
+| `--num_epochs` | 3 | Number of training epochs |
+| `--max_steps` | -1 | Maximum training steps (-1 for unlimited) |
+| `--batch_size` | 4 | Per-device batch size |
+| `--gradient_accumulation_steps` | 8 | Gradient accumulation steps |
+| `--max_length` | 4096 | Maximum sequence length |
+| `--warmup_ratio` | 0.1 | Warmup ratio |
+| `--weight_decay` | 0.01 | Weight decay |
+| `--bf16` | True | Use bf16 mixed precision |
+| `--fp16` | False | Use fp16 mixed precision |
+| `--seed` | 42 | Random seed |
+
+### LoRA Configuration
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--lora_r` | 16 | LoRA rank |
+| `--lora_alpha` | 32 | LoRA alpha |
+| `--lora_dropout` | 0.05 | LoRA dropout |
+
+LoRA is applied to the following modules: `q_proj`, `k_proj`, `v_proj`, `o_proj`, `gate_proj`, `up_proj`, `down_proj`.
+
+### Evaluation & Saving
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--eval_steps` | 500 | Evaluate every N steps (uses full test set) |
+| `--save_steps` | 500 | Save checkpoint every N steps |
+| `--logging_steps` | 10 | Log every N steps |
+
+### Dataset Configuration
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--train_datasets` | "all" | Training datasets, comma-separated or "all" |
+| `--max_train_samples` | None | Maximum training samples (None = use all) |
+
+### Output Configuration
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--output_dir` | ./training_output | Output directory for models and logs |
+| `--resume_from_checkpoint` | None | Resume training from checkpoint path |
+
+## Training Examples
+
+### Basic LoRA Training
+
+```bash
+python train.py \
+    --model_name Qwen/Qwen3-0.6B \
+    --gpu 0 \
+    --num_epochs 3 \
+    --eval_steps 100
+```
+
+### Training with Specific Datasets
+
+```bash
+python train.py \
+    --model_name Qwen/Qwen3-0.6B \
+    --gpu 0,1 \
+    --train_datasets qmsum,trivia_qa \
+    --max_steps 200 \
+    --eval_steps 50
+```
+
+### Quick Test Run
+
+```bash
+python train.py \
+    --model_name Qwen/Qwen3-0.6B \
+    --gpu 0 \
+    --max_train_samples 100 \
+    --max_steps 20 \
+    --eval_steps 10 \
+    --num_epochs 1
+```
+
+### Full Training with Custom LoRA Config
 
 ```bash
 python train.py \
     --model_name Qwen/Qwen2-7B-Instruct \
     --gpu 0,1,2,3 \
+    --lora_r 32 \
+    --lora_alpha 64 \
     --num_epochs 3 \
-    --eval_steps 500
+    --batch_size 2 \
+    --gradient_accumulation_steps 16 \
+    --max_length 8192 \
+    --eval_steps 500 \
+    --output_dir ./qwen2_7b_sft
 ```
 
-### 快速测试
+## Output Structure
 
-```bash
-python train.py \
-    --model_name Qwen/Qwen2-0.5B-Instruct \
-    --gpu 0 \
-    --use_lora \
-    --max_train_samples 100 \
-    --eval_steps 50 \
-    --num_epochs 1
-```
-
-## 参数说明
-
-### 模型参数
-- `--model_name`: HuggingFace模型名称（必需）
-- `--gpu`: 使用的GPU编号，逗号分隔（默认：使用所有GPU）
-- `--use_lora`: 使用LoRA微调
-- `--lora_r`: LoRA秩（默认：16）
-- `--lora_alpha`: LoRA alpha（默认：32）
-
-### 训练参数
-- `--learning_rate`: 学习率（默认：2e-5）
-- `--num_epochs`: 训练轮数（默认：3）
-- `--batch_size`: 批处理大小（默认：4）
-- `--gradient_accumulation_steps`: 梯度累积步数（默认：8）
-- `--max_length`: 最大序列长度（默认：4096）
-- `--warmup_ratio`: 预热比例（默认：0.1）
-
-### 评估参数
-- `--eval_steps`: 每隔多少步评估一次（默认：500）
-- 每次评估都使用 **完整测试集**（TruthfulQA + QMSum）
-
-### 数据参数
-- `--train_datasets`: 训练数据集，逗号分隔或"all"（默认：all）
-- `--max_train_samples`: 最大训练样本数（默认：全部）
-
-### 输出参数
-- `--output_dir`: 输出目录（默认：./training_output）
-- `--save_steps`: 检查点保存间隔（默认：500）
-
-## 输出结构
-
-训练完成后，输出目录包含：
+After training, the output directory contains:
 
 ```
 training_output/
-├── final_model/          # 最终训练好的模型
-├── checkpoint-500/       # 检查点
-├── checkpoint-1000/
-├── eval_step_500/        # 每步评估结果（完整测试集）
-│   ├── *_qmsum_results.json
-│   ├── *_qmsum_predictions.jsonl
-│   ├── *_truthfulqa_results.json
-│   └── *_truthfulqa_predictions.jsonl
-├── eval_history.json     # 评估历史（含综合分数和最佳模型信息）
-└── final_eval_results.json  # 最终评估结果
+├── final_model/              # Final trained LoRA adapter
+├── best_adapter/             # Best performing adapter (by combined score)
+├── adapter_step_100/         # Adapter saved at step 100
+├── adapter_step_200/         # Adapter saved at step 200
+├── checkpoint-*/             # Training checkpoints
+├── eval_step_100/            # Evaluation results at step 100
+│   ├── *_qmsum_*_results.json
+│   ├── *_qmsum_*_predictions.jsonl
+│   ├── *_truthfulqa_*_results.json
+│   └── *_truthfulqa_*_predictions.jsonl
+├── eval_history.json         # Complete evaluation history
+└── final_eval_results.json   # Final evaluation results
 ```
 
-### eval_history.json 格式
+### eval_history.json Format
 
 ```json
 {
-  "best_step": 1000,
+  "best_step": 100,
   "best_score": 1.25,
   "history": [
     {
-      "step": 500,
+      "step": 50,
+      "timestamp": "2025-01-01T12:00:00",
       "combined_score": 1.15,
-      "results": { "qmsum": {...}, "truthfulqa": {...} }
+      "results": {
+        "qmsum": {"rougeL": 0.35, "num_samples": 100, ...},
+        "truthfulqa": {"accuracy": 0.45, "avg_max_score": 0.45, ...}
+      }
     },
     ...
   ]
 }
 ```
 
-## 评估指标
+## Evaluation Metrics
 
-训练过程中和训练结束后，会在以下数据集上进行 **完整测试集** 评估：
+During training, the model is evaluated on **full test sets** of:
 
-- **QMSum**: ROUGE-L分数（会议摘要）
-- **TruthfulQA**: Accuracy + Avg Max Score（真实性问答）
+- **QMSum**: ROUGE-L score (meeting summarization task)
+- **TruthfulQA**: Accuracy + Avg Max Score (truthfulness evaluation)
 
-### 综合分数计算
+### Combined Score Calculation
 
 ```
-综合分数 = TruthfulQA_accuracy + QMSum_rougeL + TruthfulQA_avg_max_score
+Combined Score = TruthfulQA_accuracy + QMSum_rougeL + TruthfulQA_avg_max_score
 ```
 
-评估历史中会记录每个检查点的综合分数，并自动追踪最佳模型。
+The training process automatically tracks the best model based on this combined score.
 
-## 示例：完整训练流程
+## Shell Script Configuration
+
+The `run_train.sh` script supports the following environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MODEL_NAME` | Qwen/Qwen3-0.6B | Model to train |
+| `GPU` | 2,3 | GPUs to use |
+| `NUM_EPOCHS` | 3 | Training epochs |
+| `MAX_STEPS` | 200 | Maximum training steps |
+| `EVAL_STEPS` | 20 | Evaluation interval |
+| `BATCH_SIZE` | 4 | Batch size |
+| `GRAD_ACCUM` | 8 | Gradient accumulation |
+| `MAX_LENGTH` | 10000 | Maximum sequence length |
+| `OUTPUT_DIR` | ./training_output9 | Output directory |
+| `TRAIN_DATASETS` | qmsum,trivia_qa | Datasets to use |
+| `LORA_R` | 16 | LoRA rank |
+| `LORA_ALPHA` | 32 | LoRA alpha |
+
+Example:
 
 ```bash
-# 1. 进入训练目录
-cd training
-
-# 2. LoRA微调Qwen2-7B
-python train.py \
-    --model_name Qwen/Qwen2-7B-Instruct \
-    --gpu 0,1 \
-    --use_lora \
-    --lora_r 32 \
-    --num_epochs 3 \
-    --batch_size 2 \
-    --gradient_accumulation_steps 16 \
-    --max_length 8192 \
-    --eval_steps 500 \
-    --save_steps 500 \
-    --output_dir ./qwen2_7b_sft
-
-# 3. 查看评估历史
-cat ./qwen2_7b_sft/eval_history.json
-
-# 4. 使用训练好的模型进行推理
-# 模型保存在 ./qwen2_7b_sft/final_model/
+GPU="0,1,2,3" MAX_STEPS=500 EVAL_STEPS=100 ./run_train.sh
 ```
 
-## 注意事项
+## Memory Requirements
 
-1. **显存需求**：
-   - 7B模型LoRA微调：约16GB显存
-   - 7B模型全参数微调：约80GB显存（需要多卡）
-   - 建议使用LoRA微调以节省显存
+| Model Size | LoRA Training | Recommended GPUs |
+|------------|---------------|------------------|
+| 0.5B-1B | ~8GB | 1x RTX 3090/4090 |
+| 7B | ~16GB | 1x A100 40GB |
+| 13B | ~24GB | 1x A100 80GB |
+| 70B | ~80GB | 4x A100 80GB |
 
-2. **训练时间**：
-   - 取决于数据量、模型大小和硬件配置
-   - 典型情况：7B模型在4xA100上，使用全部LongBench数据训练3轮约需10-20小时
+Tips for reducing memory usage:
+- Decrease `--batch_size`
+- Decrease `--max_length`
+- Increase `--gradient_accumulation_steps`
+- Use `--bf16` (default) for efficient training
 
-3. **数据长度**：
-   - LongBench包含长文本数据，建议设置较大的max_length（4096-8192）
-   - 长序列会增加显存消耗，可以通过减小batch_size来平衡
+## FAQ
 
-## 常见问题
+**Q: CUDA out of memory error?**
+- Reduce `--batch_size` (e.g., from 4 to 2 or 1)
+- Reduce `--max_length` (e.g., from 4096 to 2048)
+- Increase `--gradient_accumulation_steps` to maintain effective batch size
 
-**Q: CUDA out of memory怎么办？**
-- 使用`--use_lora`启用LoRA微调
-- 减小`--batch_size`
-- 减小`--max_length`
-- 增大`--gradient_accumulation_steps`
-
-**Q: 如何只使用部分数据集训练？**
+**Q: How to train on specific datasets only?**
 ```bash
 python train.py --train_datasets qmsum,narrativeqa,hotpotqa ...
 ```
 
-**Q: 如何从检查点恢复训练？**
+**Q: How to resume from a checkpoint?**
 ```bash
 python train.py --resume_from_checkpoint ./training_output/checkpoint-500 ...
 ```
 
+**Q: How to use the trained adapter for inference?**
+
+The trained adapter is saved in `final_model/` or `best_adapter/`. You can load it using:
+
+```python
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Load base model
+base_model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-0.6B")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+
+# Load LoRA adapter
+model = PeftModel.from_pretrained(base_model, "./training_output/best_adapter")
+
+# Or merge for faster inference
+model = model.merge_and_unload()
+```
+
+**Q: How to merge LoRA adapter with base model?**
+
+Use the provided merge script:
+
+```bash
+python merge_and_export.py \
+    --base_model Qwen/Qwen3-0.6B \
+    --adapter_path ./training_output/best_adapter \
+    --output_path ./merged_model
+```
+
+## File Descriptions
+
+| File | Description |
+|------|-------------|
+| `train.py` | Main training entry point |
+| `trainer.py` | SFTTrainer class with evaluation callbacks |
+| `train_args.py` | Command-line argument parsing |
+| `longbench_loader.py` | LongBench dataset loading utilities |
+| `run_train.sh` | Convenient shell script for training |
+| `merge_and_export.py` | Merge LoRA adapter with base model |
+| `ds_config_zero2.json` | DeepSpeed ZeRO-2 configuration |
+| `ds_config_zero3.json` | DeepSpeed ZeRO-3 configuration |
+
+## License
+
+This project is for research purposes. Please comply with the licenses of the models and datasets you use.

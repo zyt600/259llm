@@ -1,48 +1,48 @@
 """
-原始数据集训练数据加载器 - 用于SFT训练
+Original dataset training data loader - For SFT training
 
-从各任务的原始数据集加载 train split，避免使用 LongBench test 数据（会用于评估）
+Load train split from original task datasets, avoiding LongBench test data (used for evaluation)
 
-支持的原始数据集:
-- NarrativeQA: 阅读理解
-- Qasper: 科学论文问答  
-- HotpotQA: 多跳问答
-- TriviaQA: 常识问答
-- SAMSum: 对话摘要
-- Multi-News: 多文档摘要
-- GovReport: 政府报告摘要
+Supported original datasets:
+- NarrativeQA: Reading comprehension
+- Qasper: Scientific paper QA  
+- HotpotQA: Multi-hop QA
+- TriviaQA: Commonsense QA
+- SAMSum: Dialogue summarization
+- Multi-News: Multi-document summarization
+- GovReport: Government report summarization
 
-注意: qmsum 不加载，因为要用于测试
+Note: qmsum not loaded as it's used for testing
 """
 from typing import List, Dict, Optional, Tuple
 from datasets import load_dataset, Dataset, concatenate_datasets
 import random
 
 
-# 原始数据集配置（用于训练）
-# 注意：排除 qmsum，因为要用于测试
+# Original dataset configuration (for training)
+# Note: Exclude qmsum as it's used for testing
 ORIGINAL_DATASETS = {
     "narrativeqa": {
         "hf_name": "deepmind/narrativeqa",
-        "task": "阅读理解",
-        "description": "基于小说和电影剧本的阅读理解",
+        "task": "Reading comprehension",
+        "description": "Reading comprehension based on novels and movie scripts",
         "split": "train",
-        "context_key": "document.text",  # 嵌套字段
+        "context_key": "document.text",  # Nested field
         "question_key": "question.text",
-        "answer_key": "answers",  # 列表
+        "answer_key": "answers",  # List
     },
     "qasper": {
         "hf_name": "allenai/qasper",
-        "task": "科学论文问答",
-        "description": "基于科学论文的问答",
+        "task": "Scientific paper QA",
+        "description": "QA based on scientific papers",
         "split": "train",
         "needs_special_processing": True,
     },
     "hotpotqa": {
         "hf_name": "hotpotqa/hotpot_qa",
         "hf_config": "fullwiki",
-        "task": "多跳问答",
-        "description": "多跳推理问答",
+        "task": "Multi-hop QA",
+        "description": "Multi-hop reasoning QA",
         "split": "train",
         "context_key": "context",
         "question_key": "question",
@@ -51,8 +51,8 @@ ORIGINAL_DATASETS = {
     "triviaqa": {
         "hf_name": "trivia_qa",
         "hf_config": "rc",
-        "task": "常识问答",
-        "description": "常识问答",
+        "task": "Commonsense QA",
+        "description": "Commonsense QA",
         "split": "train",
         "context_key": "search_results.search_context",
         "question_key": "question",
@@ -60,17 +60,17 @@ ORIGINAL_DATASETS = {
     },
     "samsum": {
         "hf_name": "knkarthick/samsum",
-        "task": "对话摘要",
-        "description": "对话摘要",
+        "task": "Dialogue summarization",
+        "description": "Dialogue summarization",
         "split": "train",
         "context_key": "dialogue",
-        "question_key": None,  # 无问题，直接摘要
+        "question_key": None,  # No question, direct summary
         "answer_key": "summary",
     },
     "multi_news": {
         "hf_name": "multi_news",
-        "task": "多文档摘要",
-        "description": "多文档新闻摘要",
+        "task": "Multi-doc summarization",
+        "description": "Multi-document news summarization",
         "split": "train",
         "context_key": "document",
         "question_key": None,
@@ -78,8 +78,8 @@ ORIGINAL_DATASETS = {
     },
     "gov_report": {
         "hf_name": "ccdv/govreport-summarization",
-        "task": "长文档摘要",
-        "description": "政府报告摘要",
+        "task": "Long doc summarization",
+        "description": "Government report summarization",
         "split": "train",
         "context_key": "report",
         "question_key": None,
@@ -87,34 +87,34 @@ ORIGINAL_DATASETS = {
     },
     "qmsum": {
         "hf_name": "pszemraj/qmsum-cleaned",
-        "task": "会议摘要",
-        "description": "会议摘要（只加载train，test用于评估）",
-        "split": "train",  # 只加载 train，不加载 test
+        "task": "Meeting summarization",
+        "description": "Meeting summarization (only load train, test for evaluation)",
+        "split": "train",  # Only load train, not test
         "context_key": "input",
         "question_key": None,
         "answer_key": "output",
     },
 }
 
-# 额外数据集配置（用于 "all" 模式）
+# Extra dataset configuration (for "all" mode)
 EXTRA_DATASETS = {
     "flan_v2": {
         "hf_name": "Muennighoff/flan",
         "hf_config": "default",
-        "task": "指令跟随",
-        "description": "Google FLAN v2 指令微调数据集",
+        "task": "Instruction following",
+        "description": "Google FLAN v2 instruction tuning dataset",
         "split": "train",
         "context_key": "inputs",
         "question_key": None,
         "answer_key": "targets",
     },
-    # natural_questions 数据集太大（40GB+），已移除
+    # natural_questions dataset too large (40GB+), removed
     # "natural_questions": {...},
     "trivia_qa": {
         "hf_name": "trivia_qa",
         "hf_config": "rc",
-        "task": "常识问答",
-        "description": "TriviaQA 常识问答",
+        "task": "Commonsense QA",
+        "description": "TriviaQA commonsense QA",
         "split": "train",
         "context_key": "search_results.search_context",
         "question_key": "question",
@@ -123,8 +123,8 @@ EXTRA_DATASETS = {
     "hotpot_qa": {
         "hf_name": "hotpotqa/hotpot_qa",
         "hf_config": "fullwiki",
-        "task": "多跳问答",
-        "description": "HotpotQA 多跳推理问答",
+        "task": "Multi-hop QA",
+        "description": "HotpotQA multi-hop reasoning QA",
         "split": "train",
         "context_key": "context",
         "question_key": "question",
@@ -132,8 +132,8 @@ EXTRA_DATASETS = {
     },
     "squad_v2": {
         "hf_name": "rajpurkar/squad_v2",
-        "task": "阅读理解",
-        "description": "SQuAD v2 阅读理解（含无答案问题）",
+        "task": "Reading comprehension",
+        "description": "SQuAD v2 reading comprehension (with unanswerable questions)",
         "split": "train",
         "context_key": "context",
         "question_key": "question",
@@ -141,8 +141,8 @@ EXTRA_DATASETS = {
     },
     "no_hallucination": {
         "hf_name": "LLM-Tuning-Safety/HEx-PHI",
-        "task": "抗幻觉",
-        "description": "无幻觉数据集，帮助模型避免生成虚假信息",
+        "task": "Anti-hallucination",
+        "description": "No hallucination dataset, helps model avoid generating false information",
         "split": "train",
         "context_key": "prompt",
         "question_key": None,
@@ -150,51 +150,51 @@ EXTRA_DATASETS = {
     },
     "boolq": {
         "hf_name": "google/boolq",
-        "task": "是非问答",
-        "description": "BoolQ 是非判断问答",
+        "task": "Boolean QA",
+        "description": "BoolQ yes/no judgment QA",
         "split": "train",
         "context_key": "passage",
         "question_key": "question",
-        "answer_key": "answer",  # bool类型，需要转换
+        "answer_key": "answer",  # bool type, needs conversion
     },
 }
 
-# 兼容旧代码的 LongBench 子集配置
+# LongBench subset configuration for backward compatibility
 LONGBENCH_SUBSETS = {
-    "narrativeqa": {"task": "单文档QA", "description": "阅读理解"},
-    "qasper": {"task": "单文档QA", "description": "科学论文问答"},
-    "hotpotqa": {"task": "多文档QA", "description": "多跳问答"},
-    "triviaqa": {"task": "Few-shot QA", "description": "常识问答"},
-    "samsum": {"task": "摘要", "description": "对话摘要"},
-    "multi_news": {"task": "摘要", "description": "多文档摘要"},
-    "gov_report": {"task": "摘要", "description": "政府报告摘要"},
-    "qmsum": {"task": "摘要", "description": "会议摘要"},
-    # 额外数据集
-    "flan_v2": {"task": "指令跟随", "description": "FLAN v2 指令微调"},
-    "trivia_qa": {"task": "常识问答", "description": "TriviaQA"},
-    "hotpot_qa": {"task": "多跳问答", "description": "HotpotQA"},
-    "squad_v2": {"task": "阅读理解", "description": "SQuAD v2"},
-    "no_hallucination": {"task": "抗幻觉", "description": "无幻觉数据"},
-    "boolq": {"task": "是非问答", "description": "BoolQ"},
+    "narrativeqa": {"task": "Single-doc QA", "description": "Reading comprehension"},
+    "qasper": {"task": "Single-doc QA", "description": "Scientific paper QA"},
+    "hotpotqa": {"task": "Multi-doc QA", "description": "Multi-hop QA"},
+    "triviaqa": {"task": "Few-shot QA", "description": "Commonsense QA"},
+    "samsum": {"task": "Summarization", "description": "Dialogue summarization"},
+    "multi_news": {"task": "Summarization", "description": "Multi-doc summarization"},
+    "gov_report": {"task": "Summarization", "description": "Government report summarization"},
+    "qmsum": {"task": "Summarization", "description": "Meeting summarization"},
+    # Extra datasets
+    "flan_v2": {"task": "Instruction following", "description": "FLAN v2 instruction tuning"},
+    "trivia_qa": {"task": "Commonsense QA", "description": "TriviaQA"},
+    "hotpot_qa": {"task": "Multi-hop QA", "description": "HotpotQA"},
+    "squad_v2": {"task": "Reading comprehension", "description": "SQuAD v2"},
+    "no_hallucination": {"task": "Anti-hallucination", "description": "No hallucination data"},
+    "boolq": {"task": "Boolean QA", "description": "BoolQ"},
 }
 
-# 获取所有可用于训练的子集名称（基础数据集）
+# Get all subset names available for training (base datasets)
 ALL_SUBSETS = list(ORIGINAL_DATASETS.keys())
 
-# 额外数据集名称列表
+# Extra dataset names list
 EXTRA_SUBSET_NAMES = list(EXTRA_DATASETS.keys())
 
-# 所有数据集（包括额外数据集）
+# All datasets (including extra datasets)
 ALL_SUBSETS_WITH_EXTRA = ALL_SUBSETS + EXTRA_SUBSET_NAMES
 
 
 def build_sft_prompt(subset_name: str, item: Dict) -> Tuple[str, str]:
     """
-    根据子集类型构建SFT训练的prompt和response
+    Build SFT training prompt and response based on subset type
     
     Args:
-        subset_name: 子集名称
-        item: 数据样本
+        subset_name: Subset name
+        item: Data sample
         
     Returns:
         Tuple[str, str]: (prompt, response)
@@ -202,132 +202,132 @@ def build_sft_prompt(subset_name: str, item: Dict) -> Tuple[str, str]:
     context = item.get("context", "")
     input_text = item.get("input", "")
     
-    # 获取答案
+    # Get answer
     answers = item.get("answers", [])
     if isinstance(answers, list) and len(answers) > 0:
         answer = answers[0]
     else:
         answer = str(answers) if answers else ""
     
-    # 根据任务类型构建不同的prompt
+    # Build different prompts based on task type
     task_info = LONGBENCH_SUBSETS.get(subset_name, {})
     task_type = task_info.get("task", "QA")
     
-    if task_type == "摘要":
-        # 摘要任务
+    if task_type == "Summarization":
+        # Summarization task
         if "qmsum" in subset_name or "vcsum" in subset_name:
-            prompt = f"""请根据以下会议记录，回答指定的问题。
+            prompt = f"""Please answer the specified question based on the following meeting transcript.
 
-会议记录：
+Meeting transcript:
 {context}
 
-问题：{input_text}
+Question: {input_text}
 
-请提供简洁准确的摘要："""
+Please provide a concise and accurate summary:"""
         elif "gov_report" in subset_name:
-            prompt = f"""请为以下政府报告生成摘要。
+            prompt = f"""Please generate a summary for the following government report.
 
-报告内容：
+Report content:
 {context}
 
-请生成摘要："""
+Please generate summary:"""
         elif "multi_news" in subset_name:
-            prompt = f"""请为以下新闻文章生成摘要。
+            prompt = f"""Please generate a summary for the following news articles.
 
-新闻内容：
+News content:
 {context}
 
-请生成摘要："""
+Please generate summary:"""
         elif "samsum" in subset_name:
-            prompt = f"""请为以下对话生成摘要。
+            prompt = f"""Please generate a summary for the following dialogue.
 
-对话内容：
+Dialogue content:
 {context}
 
 {input_text}
 
-请生成摘要："""
+Please generate summary:"""
         else:
-            prompt = f"""请为以下内容生成摘要。
+            prompt = f"""Please generate a summary for the following content.
 
-内容：
+Content:
 {context}
 
 {input_text}
 
-摘要："""
+Summary:"""
     
-    elif task_type in ["单文档QA", "多文档QA", "Few-shot QA"]:
-        # 问答任务
-        prompt = f"""请根据以下内容回答问题。
+    elif task_type in ["Single-doc QA", "Multi-doc QA", "Few-shot QA"]:
+        # QA task
+        prompt = f"""Please answer the question based on the following content.
 
-内容：
+Content:
 {context}
 
-问题：{input_text}
+Question: {input_text}
 
-答案："""
+Answer:"""
     
-    elif task_type == "分类":
-        # 分类任务
+    elif task_type == "Classification":
+        # Classification task
         all_classes = item.get("all_classes", [])
         if all_classes:
             classes_str = ", ".join(all_classes)
-            prompt = f"""请对以下内容进行分类，类别包括：{classes_str}
+            prompt = f"""Please classify the following content. Categories include: {classes_str}
 
-内容：
+Content:
 {context}
 
-问题：{input_text}
+Question: {input_text}
 
-分类结果："""
+Classification result:"""
         else:
-            prompt = f"""请对以下内容进行分类。
+            prompt = f"""Please classify the following content.
 
-内容：
+Content:
 {context}
 
-问题：{input_text}
+Question: {input_text}
 
-分类结果："""
+Classification result:"""
     
-    elif task_type == "代码补全":
-        # 代码任务
-        prompt = f"""请完成以下代码。
+    elif task_type == "Code completion":
+        # Code task
+        prompt = f"""Please complete the following code.
 
 {context}
 
 {input_text}
 
-补全的代码："""
+Completed code:"""
     
-    elif task_type == "合成":
-        # 合成任务
-        prompt = f"""请阅读以下内容并回答问题。
+    elif task_type == "Synthesis":
+        # Synthesis task
+        prompt = f"""Please read the following content and answer the question.
 
-内容：
+Content:
 {context}
 
-问题：{input_text}
+Question: {input_text}
 
-答案："""
+Answer:"""
     
     else:
-        # 默认格式
-        prompt = f"""请根据以下内容回答问题。
+        # Default format
+        prompt = f"""Please answer the question based on the following content.
 
-内容：
+Content:
 {context}
 
-问题：{input_text}
+Question: {input_text}
 
-答案："""
+Answer:"""
     
     return prompt, answer
 
 
 def _get_nested_value(item: Dict, key: str):
-    """获取嵌套字典的值，支持点号分隔的路径"""
+    """Get nested dictionary value, supports dot-separated paths"""
     if key is None:
         return ""
     keys = key.split(".")
@@ -343,18 +343,18 @@ def _get_nested_value(item: Dict, key: str):
 
 
 def _process_original_dataset_item(subset_name: str, item: Dict, config: Dict) -> Dict:
-    """处理原始数据集的单个样本，转换为统一格式"""
+    """Process single sample from original dataset, convert to unified format"""
     
-    # 获取 context
+    # Get context
     context = _get_nested_value(item, config.get("context_key"))
     if isinstance(context, list):
-        # 有些数据集的 context 是列表
-        context = "\n\n".join([str(c) for c in context[:5]])  # 最多取前5个
+        # Some datasets have context as list
+        context = "\n\n".join([str(c) for c in context[:5]])  # Take at most first 5
     
-    # 获取 question
+    # Get question
     question = _get_nested_value(item, config.get("question_key")) or ""
     
-    # 获取 answer
+    # Get answer
     answer_key = config.get("answer_key")
     answer = _get_nested_value(item, answer_key)
     if isinstance(answer, list):
@@ -363,7 +363,7 @@ def _process_original_dataset_item(subset_name: str, item: Dict, config: Dict) -
         answer = answer.get("value", "") or answer.get("text", "") or str(answer)
     
     return {
-        "context": str(context)[:50000],  # 限制长度
+        "context": str(context)[:50000],  # Limit length
         "input": str(question),
         "answers": [str(answer)] if answer else [""],
     }
@@ -374,24 +374,24 @@ def load_original_dataset(
     max_samples: Optional[int] = None,
 ) -> List[Dict]:
     """
-    从原始数据集加载训练数据
+    Load training data from original dataset
     
     Args:
-        subset_name: 数据集名称
-        max_samples: 最大样本数
+        subset_name: Dataset name
+        max_samples: Maximum samples
         
     Returns:
-        List[Dict]: 数据样本列表
+        List[Dict]: Data sample list
     """
     if subset_name not in ORIGINAL_DATASETS:
-        print(f"警告: {subset_name} 不在支持的原始数据集列表中，跳过")
+        print(f"Warning: {subset_name} not in supported original dataset list, skipping")
         return []
     
     config = ORIGINAL_DATASETS[subset_name]
-    print(f"正在加载原始数据集: {subset_name} ({config['hf_name']})...", end=" ")
+    print(f"Loading original dataset: {subset_name} ({config['hf_name']})...", end=" ")
     
     try:
-        # 加载数据集
+        # Load dataset
         hf_config = config.get("hf_config")
         if hf_config:
             dataset = load_dataset(
@@ -407,7 +407,7 @@ def load_original_dataset(
                 trust_remote_code=True
             )
     except Exception as e:
-        print(f"加载失败: {e}")
+        print(f"Load failed: {e}")
         return []
     
     print(f"[{config['split']}]", end=" ")
@@ -415,7 +415,7 @@ def load_original_dataset(
     samples = []
     total = len(dataset)
     
-    # 如果数据量太大，随机采样
+    # If dataset too large, random sample
     if max_samples and total > max_samples:
         indices = random.sample(range(total), max_samples)
     else:
@@ -424,10 +424,10 @@ def load_original_dataset(
     for i in indices:
         item = dataset[i]
         
-        # 转换为统一格式
+        # Convert to unified format
         processed = _process_original_dataset_item(subset_name, item, config)
         
-        # 构建SFT格式
+        # Build SFT format
         prompt, response = build_sft_prompt(subset_name, processed)
         
         sample = {
@@ -435,7 +435,7 @@ def load_original_dataset(
             "subset": subset_name,
             "prompt": prompt,
             "response": response,
-            "raw_context": processed["context"][:5000],  # 截断保存
+            "raw_context": processed["context"][:5000],  # Truncate for storage
             "raw_input": processed["input"],
             "raw_answers": processed["answers"],
             "full_prompt": prompt,
@@ -443,7 +443,7 @@ def load_original_dataset(
         }
         samples.append(sample)
     
-    print(f"共 {len(samples)} 个样本")
+    print(f"{len(samples)} samples total")
     return samples
 
 
@@ -452,24 +452,24 @@ def load_extra_dataset(
     max_samples: Optional[int] = None,
 ) -> List[Dict]:
     """
-    加载额外数据集（使用 streaming 模式避免下载完整数据集）
+    Load extra dataset (using streaming mode to avoid downloading full dataset)
     
     Args:
-        subset_name: 数据集名称
-        max_samples: 最大样本数
+        subset_name: Dataset name
+        max_samples: Maximum samples
         
     Returns:
-        List[Dict]: 数据样本列表
+        List[Dict]: Data sample list
     """
     if subset_name not in EXTRA_DATASETS:
-        print(f"警告: {subset_name} 不在额外数据集列表中，跳过")
+        print(f"Warning: {subset_name} not in extra dataset list, skipping")
         return []
     
     config = EXTRA_DATASETS[subset_name]
-    print(f"正在加载额外数据集: {subset_name} ({config['hf_name']})...", end=" ")
+    print(f"Loading extra dataset: {subset_name} ({config['hf_name']})...", end=" ")
     
     try:
-        # 使用 streaming=True 避免下载完整数据集
+        # Use streaming=True to avoid downloading full dataset
         hf_config = config.get("hf_config")
         if hf_config:
             dataset = load_dataset(
@@ -477,41 +477,41 @@ def load_extra_dataset(
                 hf_config,
                 split=config["split"],
                 trust_remote_code=True,
-                streaming=True  # 流式加载
+                streaming=True  # Streaming load
             )
         else:
             dataset = load_dataset(
                 config["hf_name"],
                 split=config["split"],
                 trust_remote_code=True,
-                streaming=True  # 流式加载
+                streaming=True  # Streaming load
             )
     except Exception as e:
-        print(f"加载失败: {e}")
+        print(f"Load failed: {e}")
         return []
     
     print(f"[{config['split']} streaming]", end=" ")
     
     samples = []
     count = 0
-    max_to_load = max_samples or 1300  # 默认最多1300条
+    max_to_load = max_samples or 1300  # Default max 1300
     
-    # 流式迭代数据集
+    # Stream iterate dataset
     for i, item in enumerate(dataset):
         if len(samples) >= max_to_load:
             break
         
-        # 根据数据集类型处理
+        # Process based on dataset type
         try:
             if subset_name == "flan_v2":
                 context = item.get("inputs", "")
                 question = ""
                 answer = item.get("targets", "")
-                prompt = f"""请回答以下问题或完成以下任务：
+                prompt = f"""Please answer the following question or complete the following task:
 
 {context}
 
-回答："""
+Answer:"""
             
             elif subset_name == "trivia_qa" or subset_name == "triviaqa":
                 search_results = item.get("search_results", {})
@@ -520,14 +520,14 @@ def load_extra_dataset(
                 question = item.get("question", "")
                 answer_dict = item.get("answer", {})
                 answer = answer_dict.get("value", "") if isinstance(answer_dict, dict) else str(answer_dict)
-                prompt = f"""请根据以下内容回答问题。
+                prompt = f"""Please answer the question based on the following content.
 
-内容：
+Content:
 {context[:5000]}
 
-问题：{question}
+Question: {question}
 
-答案："""
+Answer:"""
             
             elif subset_name == "hotpot_qa" or subset_name == "hotpotqa":
                 context_data = item.get("context", {})
@@ -542,14 +542,14 @@ def load_extra_dataset(
                     context = str(context_data)[:5000]
                 question = item.get("question", "")
                 answer = item.get("answer", "")
-                prompt = f"""请根据以下内容回答问题。
+                prompt = f"""Please answer the question based on the following content.
 
-内容：
+Content:
 {context[:5000]}
 
-问题：{question}
+Question: {question}
 
-答案："""
+Answer:"""
             
             elif subset_name == "squad_v2":
                 context = item.get("context", "")
@@ -558,39 +558,39 @@ def load_extra_dataset(
                 answer_texts = answers.get("text", [])
                 answer = answer_texts[0] if answer_texts else ""
                 if not answer:
-                    answer = "无法从给定内容中找到答案。"
-                prompt = f"""请根据以下内容回答问题。如果内容中没有答案，请回答"无法从给定内容中找到答案"。
+                    answer = "Cannot find answer from the given content."
+                prompt = f"""Please answer the question based on the following content. If there's no answer in the content, please answer "Cannot find answer from the given content".
 
-内容：
+Content:
 {context}
 
-问题：{question}
+Question: {question}
 
-答案："""
+Answer:"""
             
             elif subset_name == "no_hallucination":
                 context = item.get("prompt", "")
                 answer = item.get("response", "")
                 prompt = f"""{context}
 
-回答："""
+Answer:"""
             
             elif subset_name == "boolq":
                 context = item.get("passage", "")
                 question = item.get("question", "")
                 answer_bool = item.get("answer", False)
-                answer = "是" if answer_bool else "否"
-                prompt = f"""请根据以下内容判断问题的答案是"是"还是"否"。
+                answer = "Yes" if answer_bool else "No"
+                prompt = f"""Please determine if the answer to the question is "Yes" or "No" based on the following content.
 
-内容：
+Content:
 {context}
 
-问题：{question}
+Question: {question}
 
-答案（是/否）："""
+Answer (Yes/No):"""
             
             else:
-                # 通用处理
+                # Generic processing
                 context = _get_nested_value(item, config.get("context_key")) or ""
                 question = _get_nested_value(item, config.get("question_key")) or ""
                 answer = _get_nested_value(item, config.get("answer_key")) or ""
@@ -598,16 +598,16 @@ def load_extra_dataset(
                     context = "\n".join([str(c) for c in context[:5]])
                 if isinstance(answer, list):
                     answer = answer[0] if answer else ""
-                prompt = f"""请根据以下内容回答问题。
+                prompt = f"""Please answer the question based on the following content.
 
-内容：
+Content:
 {str(context)[:5000]}
 
-问题：{question}
+Question: {question}
 
-答案："""
+Answer:"""
             
-            # 确保有有效内容
+            # Ensure valid content
             if not answer or not prompt:
                 continue
             
@@ -625,10 +625,10 @@ def load_extra_dataset(
             samples.append(sample)
             
         except Exception as e:
-            # 跳过处理失败的样本
+            # Skip failed samples
             continue
     
-    print(f"共 {len(samples)} 个样本")
+    print(f"{len(samples)} samples total")
     return samples
 
 
@@ -639,25 +639,25 @@ def load_longbench_subset(
     prefer_train: bool = True
 ) -> List[Dict]:
     """
-    加载数据集（优先从原始数据集加载train，否则从LongBench加载test）
+    Load dataset (prefer train from original dataset, otherwise test from LongBench)
     
-    注意: qmsum 不会被加载（用于测试，避免数据泄露）
+    Note: qmsum won't be loaded (used for testing, avoid data leakage)
     
     Args:
-        subset_name: 子集名称
-        max_samples: 最大样本数
-        for_training: 是否用于训练
-        prefer_train: 是否优先加载train split
+        subset_name: Subset name
+        max_samples: Maximum samples
+        for_training: Whether for training
+        prefer_train: Whether to prefer train split
         
     Returns:
-        List[Dict]: 数据样本列表
+        List[Dict]: Data sample list
     """
-    # 优先从原始数据集加载（qmsum 只加载 train，不加载 test）
+    # Prefer loading from original dataset (qmsum only loads train, not test)
     if subset_name in ORIGINAL_DATASETS and prefer_train:
         return load_original_dataset(subset_name, max_samples)
     
-    # 回退到 LongBench
-    print(f"正在加载LongBench子集: {subset_name}...", end=" ")
+    # Fallback to LongBench
+    print(f"Loading LongBench subset: {subset_name}...", end=" ")
     
     dataset = None
     split_used = None
@@ -675,7 +675,7 @@ def load_longbench_subset(
             continue
     
     if dataset is None:
-        print(f"加载失败")
+        print(f"Load failed")
         return []
     
     print(f"[{split_used}]", end=" ")
@@ -685,7 +685,7 @@ def load_longbench_subset(
         if max_samples is not None and i >= max_samples:
             break
         
-        # 构建SFT格式的数据
+        # Build SFT format data
         prompt, response = build_sft_prompt(subset_name, item)
         
         sample = {
@@ -699,14 +699,14 @@ def load_longbench_subset(
             "length": item.get("length", len(prompt)),
         }
         
-        # 保留原始数据用于评估
+        # Keep raw data for evaluation
         if for_training:
-            sample["full_prompt"] = prompt  # 用于推理
-            sample["reference"] = response  # 用于评估
+            sample["full_prompt"] = prompt  # For inference
+            sample["reference"] = response  # For evaluation
         
         samples.append(sample)
     
-    print(f"共 {len(samples)} 个样本")
+    print(f"{len(samples)} samples total")
     return samples
 
 
@@ -718,31 +718,31 @@ def load_all_longbench_subsets(
     seed: int = 42
 ) -> List[Dict]:
     """
-    加载LongBench的多个子集
+    Load multiple LongBench subsets
     
     Args:
-        subset_names: 要加载的子集列表，None表示全部
-        max_samples_per_subset: 每个子集的最大样本数
-        max_total_samples: 总最大样本数
-        shuffle: 是否打乱数据
-        seed: 随机种子
+        subset_names: List of subsets to load, None for all
+        max_samples_per_subset: Max samples per subset
+        max_total_samples: Max total samples
+        shuffle: Whether to shuffle data
+        seed: Random seed
         
     Returns:
-        List[Dict]: 所有数据样本的列表
+        List[Dict]: All data samples list
     """
     if subset_names is None:
         subset_names = ALL_SUBSETS
     
     print(f"\n{'='*60}")
-    print(f"加载LongBench数据集")
-    print(f"子集数量: {len(subset_names)}")
+    print(f"Loading LongBench Dataset")
+    print(f"Subset count: {len(subset_names)}")
     print(f"{'='*60}")
     
     all_samples = []
     
     for subset_name in subset_names:
         if subset_name not in LONGBENCH_SUBSETS:
-            print(f"警告: 未知子集 {subset_name}，跳过")
+            print(f"Warning: Unknown subset {subset_name}, skipping")
             continue
         
         samples = load_longbench_subset(
@@ -751,24 +751,24 @@ def load_all_longbench_subsets(
         )
         all_samples.extend(samples)
     
-    # 打乱数据
+    # Shuffle data
     if shuffle:
         random.seed(seed)
         random.shuffle(all_samples)
     
-    # 限制总样本数
+    # Limit total samples
     if max_total_samples is not None and len(all_samples) > max_total_samples:
         all_samples = all_samples[:max_total_samples]
     
-    print(f"\n总计加载 {len(all_samples)} 个训练样本")
+    print(f"\nTotal loaded {len(all_samples)} training samples")
     
-    # 统计各子集样本数
+    # Count samples per subset
     subset_counts = {}
     for sample in all_samples:
         subset = sample["subset"]
         subset_counts[subset] = subset_counts.get(subset, 0) + 1
     
-    print("\n各子集样本数:")
+    print("\nSamples per subset:")
     for subset, count in sorted(subset_counts.items()):
         print(f"  {subset}: {count}")
     
@@ -782,24 +782,24 @@ def create_sft_dataset(
     truncation_side: str = "left"
 ) -> Dataset:
     """
-    创建用于SFT训练的HuggingFace Dataset
+    Create HuggingFace Dataset for SFT training
     
     Args:
-        samples: 数据样本列表
-        tokenizer: 分词器
-        max_length: 最大序列长度
-        truncation_side: 截断方向
+        samples: Data sample list
+        tokenizer: Tokenizer
+        max_length: Max sequence length
+        truncation_side: Truncation direction
         
     Returns:
-        Dataset: HuggingFace Dataset对象
+        Dataset: HuggingFace Dataset object
     """
     from datasets import Dataset as HFDataset
     
-    # 设置截断方向
+    # Set truncation direction
     original_truncation_side = tokenizer.truncation_side
     tokenizer.truncation_side = truncation_side
     
-    # 处理数据
+    # Process data
     processed_data = {
         "input_ids": [],
         "attention_mask": [],
@@ -810,8 +810,8 @@ def create_sft_dataset(
         prompt = sample["prompt"]
         response = sample["response"]
         
-        # 构建完整文本
-        # 使用 chat template 如果可用
+        # Build full text
+        # Use chat template if available
         if hasattr(tokenizer, 'apply_chat_template') and tokenizer.chat_template:
             messages = [
                 {"role": "user", "content": prompt},
@@ -828,7 +828,7 @@ def create_sft_dataset(
         else:
             full_text = f"{prompt}\n\n{response}"
         
-        # 分词
+        # Tokenize
         tokenized = tokenizer(
             full_text,
             max_length=max_length,
@@ -840,7 +840,7 @@ def create_sft_dataset(
         input_ids = tokenized["input_ids"]
         attention_mask = tokenized["attention_mask"]
         
-        # 计算prompt部分的长度（用于设置labels）
+        # Calculate prompt length (for setting labels)
         prompt_tokenized = tokenizer(
             prompt,
             max_length=max_length,
@@ -850,7 +850,7 @@ def create_sft_dataset(
         )
         prompt_length = len(prompt_tokenized["input_ids"])
         
-        # 创建labels：prompt部分设为-100（不计算loss）
+        # Create labels: set prompt part to -100 (don't compute loss)
         labels = input_ids.copy()
         for i in range(min(prompt_length, len(labels))):
             labels[i] = -100
@@ -859,10 +859,10 @@ def create_sft_dataset(
         processed_data["attention_mask"].append(attention_mask)
         processed_data["labels"].append(labels)
     
-    # 恢复原始设置
+    # Restore original settings
     tokenizer.truncation_side = original_truncation_side
     
-    # 创建Dataset
+    # Create Dataset
     dataset = HFDataset.from_dict(processed_data)
     
     return dataset
@@ -870,54 +870,52 @@ def create_sft_dataset(
 
 def get_subset_info(subset_name: str) -> Dict:
     """
-    获取子集信息
+    Get subset information
     
     Args:
-        subset_name: 子集名称
+        subset_name: Subset name
         
     Returns:
-        Dict: 子集信息
+        Dict: Subset information
     """
     return LONGBENCH_SUBSETS.get(subset_name, {
-        "task": "未知",
-        "description": "未知子集"
+        "task": "Unknown",
+        "description": "Unknown subset"
     })
 
 
 def list_all_subsets():
     """
-    列出所有可用的子集
+    List all available subsets
     """
-    print("\nLongBench 所有可用子集:")
+    print("\nLongBench all available subsets:")
     print("=" * 70)
     
     for subset_name, info in LONGBENCH_SUBSETS.items():
         print(f"\n{subset_name}:")
-        print(f"  任务: {info['task']}")
-        print(f"  描述: {info['description']}")
-        print(f"  长度: {info['max_length']}")
+        print(f"  Task: {info['task']}")
+        print(f"  Description: {info['description']}")
     
     print("\n" + "=" * 70)
 
 
 if __name__ == "__main__":
-    # 测试加载
-    print("测试加载LongBench数据集...")
+    # Test loading
+    print("Testing LongBench dataset loading...")
     
-    # 列出所有子集
+    # List all subsets
     list_all_subsets()
     
-    # 测试加载单个子集
+    # Test loading single subset
     samples = load_longbench_subset("qmsum", max_samples=3)
     if samples:
-        print("\n示例数据:")
+        print("\nExample data:")
         print(f"Prompt:\n{samples[0]['prompt'][:500]}...")
         print(f"\nResponse:\n{samples[0]['response'][:200]}...")
     
-    # 测试加载多个子集
+    # Test loading multiple subsets
     all_samples = load_all_longbench_subsets(
         subset_names=["qmsum", "narrativeqa"],
         max_samples_per_subset=5
     )
-    print(f"\n加载了 {len(all_samples)} 个样本")
-
+    print(f"\nLoaded {len(all_samples)} samples")

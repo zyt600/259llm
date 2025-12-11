@@ -1,5 +1,5 @@
 """
-评估模块 - 计算模型在各数据集上的评估指标
+Evaluation module - Calculate evaluation metrics for models on various datasets
 """
 from typing import List, Dict, Tuple, Optional
 import json
@@ -10,21 +10,21 @@ import re
 
 def evaluate_qmsum(samples: List[Dict]) -> Dict[str, float]:
     """
-    评估QMSum数据集的结果
+    Evaluate QMSum dataset results
     
-    使用evaluate库的ROUGE评估器，与官方评测一致
+    Uses evaluate library's ROUGE evaluator, consistent with official evaluation
     
     Args:
-        samples: 带有预测结果的样本列表
+        samples: Sample list with prediction results
         
     Returns:
-        Dict[str, float]: 评估分数
+        Dict[str, float]: Evaluation scores
     """
     import evaluate
     
-    print("\n正在评估QMSum数据集...")
+    print("\nEvaluating QMSum dataset...")
     
-    # 加载ROUGE评估器
+    # Load ROUGE evaluator
     rouge = evaluate.load("rouge")
     
     predictions = []
@@ -33,10 +33,10 @@ def evaluate_qmsum(samples: List[Dict]) -> Dict[str, float]:
     
     for sample in samples:
         pred = sample.get("prediction", "").strip()
-        # 使用reference字段（已处理好的单个参考答案）
+        # Use reference field (pre-processed single reference answer)
         ref = sample.get("reference", "")
         if not ref:
-            # 回退到answers字段
+            # Fall back to answers field
             ans = sample.get("answers", [])
             if isinstance(ans, list) and len(ans) > 0:
                 ref = ans[0].strip()
@@ -47,14 +47,14 @@ def evaluate_qmsum(samples: List[Dict]) -> Dict[str, float]:
         references.append(ref)
         sample_ids.append(sample.get("id", len(sample_ids)))
     
-    # 计算聚合ROUGE分数
+    # Calculate aggregated ROUGE scores
     aggregated = rouge.compute(
         predictions=predictions,
         references=references,
         use_stemmer=True
     )
     
-    # 计算每个样本的分数
+    # Calculate per-sample scores
     per_sample = rouge.compute(
         predictions=predictions,
         references=references,
@@ -62,7 +62,7 @@ def evaluate_qmsum(samples: List[Dict]) -> Dict[str, float]:
         use_aggregator=False
     )
     
-    # 打印每个样本的ROUGE-L分数
+    # Print per-sample ROUGE-L scores
     print("\n=== ROUGE-L per sample ===")
     for i, idx in enumerate(sample_ids):
         rl = per_sample["rougeL"][i]
@@ -89,27 +89,27 @@ def evaluate_qmsum(samples: List[Dict]) -> Dict[str, float]:
 
 def _bleurt_worker(samples_data: List[Dict], result_queue, gpu_id: int = 7):
     """
-    在独立进程中运行 BLEURT 评估
+    Run BLEURT evaluation in an independent process
     
     Args:
-        samples_data: 样本数据列表
-        result_queue: 用于返回结果的队列
-        gpu_id: 使用的 GPU ID
+        samples_data: Sample data list
+        result_queue: Queue for returning results
+        gpu_id: GPU ID to use
     """
     import os
     import numpy as np
     
-    # 在子进程中设置 CUDA_VISIBLE_DEVICES，不影响主进程
+    # Set CUDA_VISIBLE_DEVICES in subprocess, doesn't affect main process
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
     os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
     
     import evaluate
     
-    print(f"BLEURT 在 GPU {gpu_id} 上运行")
-    print("正在加载BLEURT评估器 (bleurt-large-128)...")
+    print(f"BLEURT running on GPU {gpu_id}")
+    print("Loading BLEURT evaluator (bleurt-large-128)...")
     bleurt = evaluate.load('bleurt', 'bleurt-large-128')
-    print("BLEURT评估器加载完成")
+    print("BLEURT evaluator loaded")
     
     n = len(samples_data)
     max_score_arr = []
@@ -120,38 +120,38 @@ def _bleurt_worker(samples_data: List[Dict], result_queue, gpu_id: int = 7):
         correct_answers = sample.get("correct_answers", [])
         incorrect_answers = sample.get("incorrect_answers", [])
         
-        # 确保是列表
+        # Ensure they are lists
         if isinstance(correct_answers, str):
             correct_answers = [correct_answers]
         if isinstance(incorrect_answers, str):
             incorrect_answers = [incorrect_answers]
         
-        # 计算与correct_answers的BLEURT分数
+        # Calculate BLEURT scores with correct_answers
         if correct_answers:
             predictions_true = [pred] * len(correct_answers)
             score_true = bleurt.compute(predictions=predictions_true, references=correct_answers)['scores']
         else:
             score_true = [0.0]
         
-        # 计算与incorrect_answers的BLEURT分数
+        # Calculate BLEURT scores with incorrect_answers
         if incorrect_answers:
             predictions_false = [pred] * len(incorrect_answers)
             score_false = bleurt.compute(predictions=predictions_false, references=incorrect_answers)['scores']
         else:
             score_false = [0.0]
         
-        # 计算指标
+        # Calculate metrics
         max_score = max(score_true)
         acc_score = int(max(score_true) > max(score_false))
         
         max_score_arr.append(max_score)
         acc_score_arr.append(acc_score)
         
-        # 打印进度
+        # Print progress
         if (i + 1) % 50 == 0 or (i + 1) == n:
-            print(f"  已评估 {i + 1}/{n} 个样本")
+            print(f"  Evaluated {i + 1}/{n} samples")
     
-    # 计算平均值
+    # Calculate averages
     avg_max_score = float(np.mean(np.array(max_score_arr)))
     accuracy = sum(acc_score_arr) / n
     
@@ -165,7 +165,7 @@ def _bleurt_worker(samples_data: List[Dict], result_queue, gpu_id: int = 7):
         "main_score": accuracy,
     }
     
-    # 清理
+    # Cleanup
     del bleurt
     
     result_queue.put(results)
@@ -173,22 +173,22 @@ def _bleurt_worker(samples_data: List[Dict], result_queue, gpu_id: int = 7):
 
 def evaluate_truthfulqa(samples: List[Dict], bleurt_gpu: int = 7) -> Dict[str, float]:
     """
-    评估TruthfulQA数据集的结果
+    Evaluate TruthfulQA dataset results
     
-    使用独立子进程运行 BLEURT，避免与主进程的 GPU 冲突
+    Uses independent subprocess to run BLEURT, avoiding GPU conflicts with main process
     
     Args:
-        samples: 带有预测结果的样本列表
-        bleurt_gpu: BLEURT 使用的 GPU ID（默认 7）
+        samples: Sample list with prediction results
+        bleurt_gpu: GPU ID for BLEURT (default 7)
         
     Returns:
-        Dict[str, float]: 评估分数
+        Dict[str, float]: Evaluation scores
     """
     import multiprocessing as mp
     
-    print("\n正在评估TruthfulQA数据集...")
+    print("\nEvaluating TruthfulQA dataset...")
     
-    # 准备样本数据（只传递必要的字段）
+    # Prepare sample data (only necessary fields)
     samples_data = []
     for s in samples:
         samples_data.append({
@@ -197,36 +197,36 @@ def evaluate_truthfulqa(samples: List[Dict], bleurt_gpu: int = 7) -> Dict[str, f
             "incorrect_answers": s.get("incorrect_answers", []),
         })
     
-    # 使用 spawn 方式创建子进程，确保完全独立的环境
+    # Use spawn to create subprocess, ensuring completely independent environment
     ctx = mp.get_context('spawn')
     result_queue = ctx.Queue()
     
-    # 在子进程中运行 BLEURT 评估
+    # Run BLEURT evaluation in subprocess
     p = ctx.Process(target=_bleurt_worker, args=(samples_data, result_queue, bleurt_gpu))
     p.start()
     
-    # 等待子进程完成
+    # Wait for subprocess to complete
     results = result_queue.get()
     p.join()
     
-    print(f"\nTruthfulQA评估完成:")
+    print(f"\nTruthfulQA evaluation complete:")
     print(f"  avg max score: {results['avg_max_score']:.6f}")
     print(f"  avg accuracy: {results['accuracy']:.3f}")
-    print("  BLEURT子进程已结束，显存已释放")
+    print("  BLEURT subprocess ended, GPU memory released")
     
     return results
 
 
 def evaluate_dataset(dataset_name: str, samples: List[Dict]) -> Dict[str, float]:
     """
-    根据数据集名称选择评估方法
+    Select evaluation method based on dataset name
     
     Args:
-        dataset_name: 数据集名称
-        samples: 样本列表
+        dataset_name: Dataset name
+        samples: Sample list
         
     Returns:
-        Dict[str, float]: 评估结果
+        Dict[str, float]: Evaluation results
     """
     dataset_name = dataset_name.lower().strip()
     
@@ -235,7 +235,7 @@ def evaluate_dataset(dataset_name: str, samples: List[Dict]) -> Dict[str, float]
     elif dataset_name == "truthfulqa":
         return evaluate_truthfulqa(samples)
     else:
-        raise ValueError(f"未知的数据集: {dataset_name}")
+        raise ValueError(f"Unknown dataset: {dataset_name}")
 
 
 def save_results(
@@ -246,28 +246,28 @@ def save_results(
     temperature: float = 0.0
 ):
     """
-    保存评估结果
+    Save evaluation results
     
     Args:
-        results: 评估结果
-        output_dir: 输出目录
-        model_name: 模型名称
-        dataset_name: 数据集名称
-        temperature: 推理温度
+        results: Evaluation results
+        output_dir: Output directory
+        model_name: Model name
+        dataset_name: Dataset name
+        temperature: Inference temperature
     """
-    # 创建输出目录
+    # Create output directory
     os.makedirs(output_dir, exist_ok=True)
     
-    # 清理模型名称用于文件名
+    # Clean model name for filename
     model_name_clean = model_name.replace("/", "_").replace("\\", "_")
     
-    # 保存JSON结果（文件名包含温度）
+    # Save JSON results (filename includes temperature)
     output_file = os.path.join(output_dir, f"{model_name_clean}_{dataset_name}_temp{temperature}_results.json")
     
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     
-    print(f"结果已保存到: {output_file}")
+    print(f"Results saved to: {output_file}")
 
 
 def save_predictions(
@@ -278,14 +278,14 @@ def save_predictions(
     temperature: float = 0.0
 ):
     """
-    保存预测结果
+    Save prediction results
     
     Args:
-        samples: 样本列表
-        output_dir: 输出目录
-        model_name: 模型名称
-        dataset_name: 数据集名称
-        temperature: 推理温度
+        samples: Sample list
+        output_dir: Output directory
+        model_name: Model name
+        dataset_name: Dataset name
+        temperature: Inference temperature
     """
     os.makedirs(output_dir, exist_ok=True)
     
@@ -294,7 +294,7 @@ def save_predictions(
     
     with open(output_file, "w", encoding="utf-8") as f:
         for sample in samples:
-            # 只保存关键字段
+            # Only save key fields
             output_sample = {
                 "id": sample.get("id"),
                 "prediction": sample.get("prediction", ""),
@@ -310,23 +310,23 @@ def save_predictions(
             
             f.write(json.dumps(output_sample, ensure_ascii=False) + "\n")
     
-    print(f"预测结果已保存到: {output_file}")
+    print(f"Predictions saved to: {output_file}")
 
 
 def print_summary(all_results: Dict[str, Dict]):
     """
-    打印评估结果摘要
+    Print evaluation results summary
     
     Args:
-        all_results: 所有数据集的评估结果
+        all_results: Evaluation results for all datasets
     """
     print("\n" + "=" * 60)
-    print("评估结果摘要")
+    print("Evaluation Results Summary")
     print("=" * 60)
     
     for dataset_name, results in all_results.items():
         print(f"\n{results.get('dataset', dataset_name)}:")
-        print(f"  样本数量: {results.get('num_samples', 'N/A')}")
+        print(f"  Sample count: {results.get('num_samples', 'N/A')}")
         
         if dataset_name == "qmsum":
             print(f"  ROUGE-L (F1): {results.get('rougeL', 0):.4f}")
@@ -339,4 +339,3 @@ def print_summary(all_results: Dict[str, Dict]):
             print(f"  avg accuracy: {results.get('accuracy', 0):.3f}")
     
     print("\n" + "=" * 60)
-

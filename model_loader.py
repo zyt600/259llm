@@ -1,5 +1,5 @@
 """
-模型加载模块 - 使用SGLang或llama.cpp加载和管理大模型
+Model loading module - Load and manage LLMs using SGLang or llama.cpp
 """
 import os
 from typing import Optional, List
@@ -7,24 +7,24 @@ from typing import Optional, List
 
 def is_gguf_model(model_name: str) -> bool:
     """
-    检查模型是否为GGUF格式
+    Check if model is in GGUF format
     
     Args:
-        model_name: 模型名称或路径
+        model_name: Model name or path
         
     Returns:
-        bool: 如果是GGUF模型返回True
-        - 以.gguf结尾的文件视为GGUF
-        - 以-GGUF结尾的HuggingFace仓库名视为GGUF
-        - 本地目录不是GGUF（是HuggingFace格式）
+        bool: True if GGUF model
+        - Files ending with .gguf are GGUF
+        - HuggingFace repo names ending with -GGUF are GGUF
+        - Local directories are not GGUF (they are HuggingFace format)
     """
-    # 如果是本地目录，则不是GGUF（是HuggingFace格式模型）
+    # If it's a local directory, it's not GGUF (it's HuggingFace format)
     if os.path.isdir(model_name):
         return False
-    # 以.gguf结尾的文件是GGUF
+    # Files ending with .gguf are GGUF
     if model_name.lower().endswith('.gguf'):
         return True
-    # 以-GGUF结尾的HuggingFace仓库名是GGUF
+    # HuggingFace repo names ending with -GGUF are GGUF
     if model_name.endswith('-GGUF'):
         return True
     return False
@@ -35,62 +35,62 @@ def load_model_with_llama_cpp(
     verbose: bool = False
 ):
     """
-    使用llama.cpp加载GGUF模型
+    Load GGUF model using llama.cpp
     
     Args:
-        model_path: GGUF模型文件路径或HuggingFace仓库名(以GGUF结尾)
-        verbose: 是否打印详细信息
+        model_path: GGUF model file path or HuggingFace repo name (ending with GGUF)
+        verbose: Whether to print detailed information
         
     Returns:
-        Llama: llama-cpp-python模型实例
+        Llama: llama-cpp-python model instance
     """
     try:
         from llama_cpp import Llama
     except ImportError:
         raise ImportError(
-            "请安装llama-cpp-python: pip install llama-cpp-python\n"
-            "如需GPU支持，请使用: pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124\n"
-            "详情参考: https://github.com/abetlen/llama-cpp-python"
+            "Please install llama-cpp-python: pip install llama-cpp-python\n"
+            "For GPU support: pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124\n"
+            "Reference: https://github.com/abetlen/llama-cpp-python"
         )
     
-    print(f"\n正在使用llama.cpp加载模型: {model_path}")
-    print(f"GPU层数: 全部")
+    print(f"\nLoading model with llama.cpp: {model_path}")
+    print(f"GPU layers: All")
     
-    # 判断是本地文件还是HuggingFace仓库
-    # 本地路径：以./或/开头，或者文件存在
+    # Check if local file or HuggingFace repo
+    # Local path: starts with ./ or /, or file exists
     is_local_path = model_path.startswith('./') or model_path.startswith('/')
     is_local_file = is_local_path or os.path.exists(model_path)
     
     if is_local_file:
-        # 本地GGUF文件
+        # Local GGUF file
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"本地GGUF文件不存在: {model_path}")
-        print(f"从本地文件加载: {model_path}")
+            raise FileNotFoundError(f"Local GGUF file not found: {model_path}")
+        print(f"Loading from local file: {model_path}")
         model = Llama(
             model_path=model_path,
             n_gpu_layers=-1,
-            n_ctx=32768,  # 设置合理的上下文长度
-            n_batch=5120,  # 增大batch加速长prompt处理
+            n_ctx=32768,  # Set reasonable context length
+            n_batch=5120,  # Increase batch for faster long prompt processing
             verbose=verbose
         )
     else:
-        # 从HuggingFace下载 (仓库名以GGUF结尾)
-        print("从HuggingFace下载GGUF文件...")
-        # 使用from_pretrained从HuggingFace加载
-        # 自动选择最优的量化版本（Q4_K_M是一个不错的平衡点）
+        # Download from HuggingFace (repo name ends with GGUF)
+        print("Downloading GGUF file from HuggingFace...")
+        # Use from_pretrained to load from HuggingFace
+        # Auto-select optimal quantization version (Q4_K_M is a good balance)
         model = Llama.from_pretrained(
             repo_id=model_path,
-            filename="*Q4_K_M.gguf",  # 默认选择Q4_K_M量化版本
+            filename="*Q4_K_M.gguf",  # Default to Q4_K_M quantization
             n_gpu_layers=-1,
-            n_ctx=32768,  # 设置合理的上下文长度
-            n_batch=5120,  # 增大batch加速长prompt处理
+            n_ctx=32768,  # Set reasonable context length
+            n_batch=5120,  # Increase batch for faster long prompt processing
             verbose=verbose
         )
     
-    # 获取实际的上下文长度
+    # Get actual context length
     actual_n_ctx = model.n_ctx()
-    print(f"上下文长度: {actual_n_ctx}")
-    print("模型加载完成！\n")
+    print(f"Context length: {actual_n_ctx}")
+    print("Model loaded successfully!\n")
     
     return model
 
@@ -103,31 +103,31 @@ def load_model_with_sglang(
     trust_remote_code: bool = True
 ):
     """
-    使用SGLang加载模型
+    Load model using SGLang
     
     Args:
-        model_name: Hugging Face模型名称
-        gpu_ids: GPU ID列表
-        tp_size: 张量并行大小
-        mem_fraction: GPU内存使用比例
-        trust_remote_code: 是否信任远程代码
+        model_name: Hugging Face model name
+        gpu_ids: GPU ID list
+        tp_size: Tensor parallel size
+        mem_fraction: GPU memory usage fraction
+        trust_remote_code: Whether to trust remote code
         
     Returns:
-        sglang.Engine: SGLang引擎实例
+        sglang.Engine: SGLang engine instance
     """
     try:
         import sglang as sgl
     except ImportError:
         raise ImportError(
-            "请安装sglang: pip install 'sglang[all]'\n"
-            "详情参考: https://github.com/sgl-project/sglang"
+            "Please install sglang: pip install 'sglang[all]'\n"
+            "Reference: https://github.com/sgl-project/sglang"
         )
     
-    print(f"\n正在加载模型: {model_name}")
-    print(f"使用GPU: {gpu_ids}")
-    print(f"张量并行大小: {tp_size}")
+    print(f"\nLoading model: {model_name}")
+    print(f"Using GPUs: {gpu_ids}")
+    print(f"Tensor parallel size: {tp_size}")
     
-    # 创建SGLang Engine
+    # Create SGLang Engine
     engine = sgl.Engine(
         model_path=model_name,
         tp_size=tp_size,
@@ -135,18 +135,18 @@ def load_model_with_sglang(
         trust_remote_code=trust_remote_code,
     )
     
-    print("模型加载完成！\n")
+    print("Model loaded successfully!\n")
     
     return engine
 
 
 def load_tokenizer(model_name: str, trust_remote_code: bool = True):
     """
-    加载tokenizer
+    Load tokenizer
     
     Args:
-        model_name: Hugging Face模型名称
-        trust_remote_code: 是否信任远程代码
+        model_name: Hugging Face model name
+        trust_remote_code: Whether to trust remote code
         
     Returns:
         tokenizer: HuggingFace tokenizer
@@ -158,7 +158,7 @@ def load_tokenizer(model_name: str, trust_remote_code: bool = True):
         trust_remote_code=trust_remote_code
     )
     
-    # 设置padding token
+    # Set padding token
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         
@@ -167,9 +167,9 @@ def load_tokenizer(model_name: str, trust_remote_code: bool = True):
 
 class ModelManager:
     """
-    模型管理器类 - 统一管理模型的加载和推理
-    支持SGLang和llama.cpp两种后端
-    llama.cpp支持多GPU并行（每个GPU加载一个模型实例）
+    Model manager class - Unified management of model loading and inference
+    Supports SGLang and llama.cpp backends
+    llama.cpp supports multi-GPU parallel (each GPU loads a model instance)
     """
     
     def __init__(
@@ -180,13 +180,13 @@ class ModelManager:
         mem_fraction: float = 0.7
     ):
         """
-        初始化模型管理器
+        Initialize model manager
         
         Args:
-            model_name: Hugging Face模型名称或GGUF文件路径
-            gpu_ids: GPU ID列表
-            tp_size: 张量并行大小 (仅SGLang使用)
-            mem_fraction: GPU内存使用比例 (仅SGLang使用)
+            model_name: Hugging Face model name or GGUF file path
+            gpu_ids: GPU ID list
+            tp_size: Tensor parallel size (SGLang only)
+            mem_fraction: GPU memory usage fraction (SGLang only)
         """
         self.model_name = model_name
         self.gpu_ids = gpu_ids
@@ -196,27 +196,27 @@ class ModelManager:
         self.engine = None
         self.tokenizer = None
         self.backend = "llama_cpp" if is_gguf_model(model_name) else "sglang"
-        # llama.cpp多GPU并行模式
+        # llama.cpp multi-GPU parallel mode
         self.multi_gpu_parallel = self.backend == "llama_cpp" and len(gpu_ids) > 1
         
     def load(self):
-        """加载模型和tokenizer"""
+        """Load model and tokenizer"""
         if self.backend == "llama_cpp":
-            print(f"检测到GGUF模型，使用llama.cpp后端")
+            print(f"Detected GGUF model, using llama.cpp backend")
             if self.multi_gpu_parallel:
-                # 多GPU并行模式：不在主进程加载模型，由worker进程各自加载
-                print(f"[多GPU并行模式] 使用 {len(self.gpu_ids)} 个GPU: {self.gpu_ids}")
-                print("模型将在推理时由各个GPU worker进程分别加载")
-                self.engine = None  # 占位符，实际推理时worker会加载
+                # Multi-GPU parallel mode: don't load model in main process, workers load separately
+                print(f"[Multi-GPU parallel mode] Using {len(self.gpu_ids)} GPUs: {self.gpu_ids}")
+                print("Model will be loaded by each GPU worker process during inference")
+                self.engine = None  # Placeholder, workers will load during inference
             else:
-                # 单GPU模式
+                # Single GPU mode
                 self.engine = load_model_with_llama_cpp(
                     model_path=self.model_name
                 )
-            # llama.cpp不需要单独加载tokenizer，它内置了
+            # llama.cpp doesn't need separate tokenizer loading, it has built-in tokenizer
             self.tokenizer = None
         else:
-            print(f"使用SGLang后端")
+            print(f"Using SGLang backend")
             self.engine = load_model_with_sglang(
                 model_name=self.model_name,
                 gpu_ids=self.gpu_ids,
@@ -226,18 +226,18 @@ class ModelManager:
             self.tokenizer = load_tokenizer(self.model_name)
         
     def shutdown(self):
-        """关闭模型引擎"""
+        """Shutdown model engine"""
         if self.engine is not None:
             if self.backend == "sglang":
                 self.engine.shutdown()
-                print("SGLang引擎已关闭")
+                print("SGLang engine shutdown")
             else:
-                # llama.cpp会在对象销毁时自动释放资源
+                # llama.cpp automatically releases resources when object is destroyed
                 del self.engine
                 self.engine = None
-                print("llama.cpp模型已卸载")
+                print("llama.cpp model unloaded")
         elif self.multi_gpu_parallel:
-            print("多GPU并行模式：worker进程已自动清理")
+            print("Multi-GPU parallel mode: worker processes cleaned up automatically")
             
     def __enter__(self):
         self.load()
@@ -245,4 +245,3 @@ class ModelManager:
         
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.shutdown()
-

@@ -1,5 +1,5 @@
 """
-工具函数模块
+Utility functions module
 """
 import os
 import json
@@ -9,10 +9,10 @@ from typing import List, Dict, Optional
 
 def check_gpu_availability() -> Dict:
     """
-    检查GPU可用性
+    Check GPU availability
     
     Returns:
-        Dict: GPU信息
+        Dict: GPU information
     """
     info = {
         "cuda_available": torch.cuda.is_available(),
@@ -27,7 +27,7 @@ def check_gpu_availability() -> Dict:
         for i in range(info["gpu_count"]):
             info["gpu_names"].append(torch.cuda.get_device_name(i))
             
-            # 获取GPU内存信息
+            # Get GPU memory info
             total_memory = torch.cuda.get_device_properties(i).total_memory
             info["gpu_memory"].append({
                 "total_gb": total_memory / (1024**3),
@@ -37,33 +37,33 @@ def check_gpu_availability() -> Dict:
 
 
 def print_gpu_info():
-    """打印GPU信息"""
+    """Print GPU information"""
     info = check_gpu_availability()
     
     print("\n" + "=" * 50)
-    print("GPU信息")
+    print("GPU Information")
     print("=" * 50)
     
     if not info["cuda_available"]:
-        print("CUDA不可用")
+        print("CUDA not available")
         return
     
-    print(f"可用GPU数量: {info['gpu_count']}")
+    print(f"Available GPU count: {info['gpu_count']}")
     
     for i in range(info["gpu_count"]):
         print(f"\nGPU {i}:")
-        print(f"  名称: {info['gpu_names'][i]}")
-        print(f"  总内存: {info['gpu_memory'][i]['total_gb']:.2f} GB")
+        print(f"  Name: {info['gpu_names'][i]}")
+        print(f"  Total memory: {info['gpu_memory'][i]['total_gb']:.2f} GB")
     
     print("=" * 50 + "\n")
 
 
 def set_random_seed(seed: int = 42):
     """
-    设置随机种子
+    Set random seed
     
     Args:
-        seed: 随机种子
+        seed: Random seed
     """
     import random
     import numpy as np
@@ -78,13 +78,13 @@ def set_random_seed(seed: int = 42):
 
 def load_json(filepath: str) -> Dict:
     """
-    加载JSON文件
+    Load JSON file
     
     Args:
-        filepath: 文件路径
+        filepath: File path
         
     Returns:
-        Dict: JSON数据
+        Dict: JSON data
     """
     with open(filepath, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -92,11 +92,11 @@ def load_json(filepath: str) -> Dict:
 
 def save_json(data: Dict, filepath: str):
     """
-    保存JSON文件
+    Save JSON file
     
     Args:
-        data: 要保存的数据
-        filepath: 文件路径
+        data: Data to save
+        filepath: File path
     """
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", encoding="utf-8") as f:
@@ -105,13 +105,13 @@ def save_json(data: Dict, filepath: str):
 
 def load_jsonl(filepath: str) -> List[Dict]:
     """
-    加载JSONL文件
+    Load JSONL file
     
     Args:
-        filepath: 文件路径
+        filepath: File path
         
     Returns:
-        List[Dict]: 数据列表
+        List[Dict]: Data list
     """
     data = []
     with open(filepath, "r", encoding="utf-8") as f:
@@ -123,11 +123,11 @@ def load_jsonl(filepath: str) -> List[Dict]:
 
 def save_jsonl(data: List[Dict], filepath: str):
     """
-    保存JSONL文件
+    Save JSONL file
     
     Args:
-        data: 要保存的数据列表
-        filepath: 文件路径
+        data: Data list to save
+        filepath: File path
     """
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", encoding="utf-8") as f:
@@ -137,15 +137,15 @@ def save_jsonl(data: List[Dict], filepath: str):
 
 def truncate_text(text: str, max_length: int, suffix: str = "...") -> str:
     """
-    截断文本
+    Truncate text
     
     Args:
-        text: 原始文本
-        max_length: 最大长度
-        suffix: 截断后缀
+        text: Original text
+        max_length: Maximum length
+        suffix: Truncation suffix
         
     Returns:
-        str: 截断后的文本
+        str: Truncated text
     """
     if len(text) <= max_length:
         return text
@@ -154,25 +154,24 @@ def truncate_text(text: str, max_length: int, suffix: str = "...") -> str:
 
 def format_time(seconds: float) -> str:
     """
-    格式化时间
+    Format time
     
     Args:
-        seconds: 秒数
+        seconds: Number of seconds
         
     Returns:
-        str: 格式化的时间字符串
+        str: Formatted time string
     """
     if seconds < 60:
-        return f"{seconds:.2f}秒"
+        return f"{seconds:.2f}s"
     elif seconds < 3600:
         minutes = seconds / 60
-        return f"{minutes:.2f}分钟"
+        return f"{minutes:.2f}min"
     else:
         hours = seconds / 3600
-        return f"{hours:.2f}小时"
+        return f"{hours:.2f}h"
 
 
 if __name__ == "__main__":
-    # 测试GPU信息
+    # Test GPU info
     print_gpu_info()
-

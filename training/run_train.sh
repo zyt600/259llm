@@ -1,49 +1,49 @@
 #!/bin/bash
-# LongBench SFT训练运行脚本 - 使用纯 LoRA
+# LongBench SFT Training Script - Pure LoRA
 
-# 默认参数
+# Default parameters
 # MODEL_NAME=${MODEL_NAME:-"google/gemma-3-270m-it"}
 MODEL_NAME=${MODEL_NAME:-"Qwen/Qwen3-0.6B"}
 GPU=${GPU:-"2,3"}
 NUM_EPOCHS=${NUM_EPOCHS:-3}
-MAX_STEPS=${MAX_STEPS:-3} 
-EVAL_STEPS=${EVAL_STEPS:-2}
+MAX_STEPS=${MAX_STEPS:-200} 
+EVAL_STEPS=${EVAL_STEPS:-20}
 BATCH_SIZE=${BATCH_SIZE:-4}
 GRAD_ACCUM=${GRAD_ACCUM:-8}
 MAX_LENGTH=${MAX_LENGTH:-10000}
-OUTPUT_DIR=${OUTPUT_DIR:-"./training_output8"}  # 新目录
-TRAIN_DATASETS=${TRAIN_DATASETS:-"qmsum"}  # qmsum+trivia_qa 与评估任务相关
+OUTPUT_DIR=${OUTPUT_DIR:-"./training_output9"}  # New directory
+TRAIN_DATASETS=${TRAIN_DATASETS:-"qmsum,trivia_qa"}  # qmsum+trivia_qa related to evaluation tasks
 # TRAIN_DATASETS=${TRAIN_DATASETS:-"all"}
 LORA_R=${LORA_R:-16}
 LORA_ALPHA=${LORA_ALPHA:-32}
 
-# 设置CUDA可见设备
+# Set CUDA visible devices
 export CUDA_VISIBLE_DEVICES=$GPU
 
-# 禁用tokenizer并行，避免fork后的警告和潜在问题
+# Disable tokenizer parallelism to avoid warnings and potential issues after fork
 export TOKENIZERS_PARALLELISM=false
 
-# 打印配置
+# Print configuration
 echo "=========================================="
-echo "LongBench SFT训练配置 (纯 LoRA)"
+echo "LongBench SFT Training Config (Pure LoRA)"
 echo "=========================================="
-echo "模型: $MODEL_NAME"
+echo "Model: $MODEL_NAME"
 echo "GPU: $GPU"
-echo "训练方式: 纯 LoRA (r=$LORA_R, alpha=$LORA_ALPHA)"
-echo "训练轮数: $NUM_EPOCHS"
-echo "最大步数: $MAX_STEPS"
-echo "评估间隔: $EVAL_STEPS 步 (完整测试集)"
-echo "批处理大小: $BATCH_SIZE"
-echo "梯度累积: $GRAD_ACCUM"
-echo "最大长度: $MAX_LENGTH"
-echo "输出目录: $OUTPUT_DIR"
-echo "训练数据集: $TRAIN_DATASETS"
+echo "Training method: Pure LoRA (r=$LORA_R, alpha=$LORA_ALPHA)"
+echo "Epochs: $NUM_EPOCHS"
+echo "Max steps: $MAX_STEPS"
+echo "Eval interval: $EVAL_STEPS steps (full test set)"
+echo "Batch size: $BATCH_SIZE"
+echo "Gradient accumulation: $GRAD_ACCUM"
+echo "Max length: $MAX_LENGTH"
+echo "Output directory: $OUTPUT_DIR"
+echo "Training datasets: $TRAIN_DATASETS"
 echo "=========================================="
-echo "评估: TruthfulQA + QMSum 完整测试集"
-echo "综合分数 = accuracy + rougeL + avg_max_score"
+echo "Evaluation: TruthfulQA + QMSum full test set"
+echo "Combined score = accuracy + rougeL + avg_max_score"
 echo "=========================================="
 
-# 构建命令
+# Build command
 CMD="python3 train.py \
     --model_name $MODEL_NAME \
     --gpu $GPU \
@@ -58,8 +58,8 @@ CMD="python3 train.py \
     --lora_r $LORA_R \
     --lora_alpha $LORA_ALPHA"
 
-# 执行训练
+# Execute training
 echo ""
-echo "执行命令: $CMD"
+echo "Executing command: $CMD"
 echo ""
 eval $CMD

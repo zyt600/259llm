@@ -1,5 +1,5 @@
 """
-SFT训练器模块 - 支持定期评估和检查点保存
+SFT Trainer Module - Supports periodic evaluation and checkpoint saving
 """
 import os
 import sys
@@ -22,21 +22,21 @@ from transformers import (
     DataCollatorForSeq2Seq,
 )
 
-# 添加父目录到path以导入评估模块
+# Add parent directory to path for importing evaluation module
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def compute_combined_score(results: Dict) -> float:
     """
-    计算综合分数
+    Compute combined score
     
-    综合分数 = TruthfulQA accuracy + QMSum ROUGE-L + TruthfulQA avg_max_score
+    Combined score = TruthfulQA accuracy + QMSum ROUGE-L + TruthfulQA avg_max_score
     
     Args:
-        results: 包含 qmsum 和 truthfulqa 评估结果的字典
+        results: Dictionary containing qmsum and truthfulqa evaluation results
         
     Returns:
-        float: 综合分数
+        float: Combined score
     """
     score = 0.0
     
@@ -56,7 +56,7 @@ def compute_combined_score(results: Dict) -> float:
 
 @dataclass
 class EvalResults:
-    """评估结果数据类"""
+    """Evaluation results dataclass"""
     step: int
     timestamp: str
     results: Dict
@@ -65,7 +65,7 @@ class EvalResults:
 
 class PeriodicEvalCallback(TrainerCallback):
     """
-    定期评估回调 - 在指定步数执行全量测试
+    Periodic evaluation callback - Execute full test at specified steps
     """
     
     def __init__(
@@ -76,18 +76,18 @@ class PeriodicEvalCallback(TrainerCallback):
         tokenizer,
     ):
         """
-        初始化评估回调
+        Initialize evaluation callback
         
         Args:
-            eval_fn: 评估函数，接收 (model, tokenizer, step) 参数
-            eval_steps: 每隔多少步评估一次
-            output_dir: 输出目录
-            tokenizer: 分词器
+            eval_fn: Evaluation function, accepts (model, tokenizer, step) parameters
+            eval_steps: Evaluate every N steps
+            output_dir: Output directory
+            tokenizer: Tokenizer
         """
         self.eval_fn = eval_fn
         self.eval_steps = eval_steps
         self.output_dir = output_dir
-        self.tokenizer = tokenizer  # 保存tokenizer引用
+        self.tokenizer = tokenizer  # Save tokenizer reference
         self.eval_history = []
         self.best_score = -float('inf')
         self.best_step = -1
@@ -101,21 +101,21 @@ class PeriodicEvalCallback(TrainerCallback):
         tokenizer=None,
         **kwargs
     ):
-        """每步结束时检查是否需要评估"""
+        """Check if evaluation needed at each step end"""
         if state.global_step > 0 and state.global_step % self.eval_steps == 0:
             print(f"\n{'='*70}")
-            print(f"步骤 {state.global_step}: 开始全量评估 (TruthfulQA + QMSum 完整测试集)")
+            print(f"Step {state.global_step}: Starting full evaluation (TruthfulQA + QMSum full test set)")
             print(f"{'='*70}")
             
-            # 执行评估
+            # Execute evaluation
             try:
                 results, combined_score = self.eval_fn(
                     model=model,
-                    tokenizer=self.tokenizer,  # 使用保存的tokenizer
+                    tokenizer=self.tokenizer,  # Use saved tokenizer
                     step=state.global_step,
                 )
                 
-                # 记录评估结果
+                # Record evaluation results
                 eval_result = EvalResults(
                     step=state.global_step,
                     timestamp=datetime.now().isoformat(),
@@ -124,42 +124,42 @@ class PeriodicEvalCallback(TrainerCallback):
                 )
                 self.eval_history.append(eval_result)
                 
-                # 每次评估都保存 adapter（按步骤命名）
+                # Save adapter at each evaluation (named by step)
                 step_adapter_dir = os.path.join(self.output_dir, f"adapter_step_{state.global_step}")
                 if model is not None:
                     model.save_pretrained(step_adapter_dir)
                     if self.tokenizer is not None:
                         self.tokenizer.save_pretrained(step_adapter_dir)
-                    print(f"\n💾 Adapter 已保存到: {step_adapter_dir}")
+                    print(f"\n💾 Adapter saved to: {step_adapter_dir}")
                 
-                # 检查是否是最佳模型
+                # Check if best model
                 if combined_score > self.best_score:
                     self.best_score = combined_score
                     self.best_step = state.global_step
-                    print(f"🏆 新的最佳模型！综合分数: {combined_score:.4f}")
+                    print(f"🏆 New best model! Combined score: {combined_score:.4f}")
                     
-                    # 同时保存一份到 best_adapter
+                    # Also save to best_adapter
                     best_adapter_dir = os.path.join(self.output_dir, "best_adapter")
                     if model is not None:
                         model.save_pretrained(best_adapter_dir)
                         if self.tokenizer is not None:
                             self.tokenizer.save_pretrained(best_adapter_dir)
                 
-                # 保存评估历史
+                # Save evaluation history
                 self._save_eval_history()
                 
-                print(f"\n步骤 {state.global_step} 评估完成")
-                print(f"综合分数: {combined_score:.4f} (最佳: {self.best_score:.4f} @ step {self.best_step})")
+                print(f"\nStep {state.global_step} evaluation complete")
+                print(f"Combined score: {combined_score:.4f} (Best: {self.best_score:.4f} @ step {self.best_step})")
                 
             except Exception as e:
-                print(f"评估出错: {e}")
+                print(f"Evaluation error: {e}")
                 import traceback
                 traceback.print_exc()
         
         return control
     
     def _save_eval_history(self):
-        """保存评估历史到文件"""
+        """Save evaluation history to file"""
         history_file = os.path.join(self.output_dir, "eval_history.json")
         
         history_data = [
@@ -172,7 +172,7 @@ class PeriodicEvalCallback(TrainerCallback):
             for er in self.eval_history
         ]
         
-        # 添加最佳模型信息
+        # Add best model info
         summary = {
             "best_step": self.best_step,
             "best_score": self.best_score,
@@ -182,12 +182,12 @@ class PeriodicEvalCallback(TrainerCallback):
         with open(history_file, "w", encoding="utf-8") as f:
             json.dump(summary, f, ensure_ascii=False, indent=2)
         
-        print(f"评估历史已保存到: {history_file}")
+        print(f"Evaluation history saved to: {history_file}")
 
 
 class SFTTrainer:
     """
-    SFT训练器类 - 封装完整的训练流程
+    SFT Trainer class - Encapsulates complete training workflow
     """
     
     def __init__(
@@ -216,7 +216,7 @@ class SFTTrainer:
         resume_from_checkpoint: Optional[str] = None,
     ):
         """
-        初始化SFT训练器
+        Initialize SFT trainer
         """
         self.model_name = model_name
         self.output_dir = output_dir
@@ -245,32 +245,32 @@ class SFTTrainer:
         self.tokenizer = None
         self.trainer = None
         
-        # 创建输出目录
+        # Create output directory
         os.makedirs(output_dir, exist_ok=True)
         
     def load_model_and_tokenizer(self):
         """
-        加载模型和分词器
+        Load model and tokenizer
         """
-        print(f"\n正在加载模型: {self.model_name}")
+        print(f"\nLoading model: {self.model_name}")
         
-        # 加载tokenizer
+        # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_name,
             trust_remote_code=True,
             padding_side="right"
         )
         
-        # 设置padding token
+        # Set padding token
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
         
-        # 加载模型到第一个可见GPU (device 0)
-        # 注意：由于 CUDA_VISIBLE_DEVICES 已在脚本中设置，device 0 就是指定的第一个 GPU
+        # Load model to first visible GPU (device 0)
+        # Note: Since CUDA_VISIBLE_DEVICES is set in script, device 0 is the first specified GPU
         device_map = {"": 0}
         
-        # 确定数据类型
+        # Determine data type
         if self.bf16:
             torch_dtype = torch.bfloat16
         elif self.fp16:
@@ -278,61 +278,61 @@ class SFTTrainer:
         else:
             torch_dtype = torch.float32
         
-        print(f"  使用纯 LoRA (数据类型: {torch_dtype})")
+        print(f"  Using pure LoRA (dtype: {torch_dtype})")
         
-        # 构建模型加载参数（纯 LoRA，不使用量化）
+        # Build model loading parameters (pure LoRA, no quantization)
         model_kwargs = {
             "torch_dtype": torch_dtype,
             "device_map": device_map,
             "trust_remote_code": True,
         }
         
-        # 只有确认 flash_attn 可用时才启用
+        # Only enable flash_attn if available
         if self._check_flash_attention():
             model_kwargs["attn_implementation"] = "flash_attention_2"
-            print("  使用 Flash Attention 2")
+            print("  Using Flash Attention 2")
         else:
-            print("  使用默认 Attention 实现")
+            print("  Using default attention implementation")
         
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_name,
             **model_kwargs
         )
         
-        # 启用gradient checkpointing以节省显存
+        # Enable gradient checkpointing to save VRAM
         self.model.gradient_checkpointing_enable()
         
-        # 如果使用LoRA
+        # If using LoRA
         if self.use_lora:
             self._apply_lora()
         
-        print(f"模型加载完成！")
-        print(f"  参数量: {self._count_parameters()}")
+        print(f"Model loaded!")
+        print(f"  Parameters: {self._count_parameters()}")
         if self.use_lora:
-            print(f"  可训练参数量: {self._count_trainable_parameters()}")
+            print(f"  Trainable parameters: {self._count_trainable_parameters()}")
     
     def _check_flash_attention(self) -> bool:
-        """检查是否支持Flash Attention"""
+        """Check if Flash Attention is supported"""
         try:
             import flash_attn
             import importlib.metadata
-            # 确保包元数据存在
+            # Ensure package metadata exists
             importlib.metadata.version("flash_attn")
             return True
         except (ImportError, Exception):
             return False
     
     def _apply_lora(self):
-        """应用纯 LoRA"""
+        """Apply pure LoRA"""
         try:
             from peft import LoraConfig, get_peft_model, TaskType
         except ImportError:
-            raise ImportError("请安装peft库: pip install peft")
+            raise ImportError("Please install peft library: pip install peft")
         
-        print(f"\n应用 LoRA 配置:")
+        print(f"\nApplying LoRA config:")
         print(f"  r={self.lora_r}, alpha={self.lora_alpha}, dropout={self.lora_dropout}")
         
-        # LoRA配置
+        # LoRA configuration
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             r=self.lora_r,
@@ -347,7 +347,7 @@ class SFTTrainer:
         self.model.print_trainable_parameters()
     
     def _count_parameters(self) -> str:
-        """统计模型参数量"""
+        """Count model parameters"""
         total = sum(p.numel() for p in self.model.parameters())
         if total >= 1e9:
             return f"{total/1e9:.2f}B"
@@ -357,7 +357,7 @@ class SFTTrainer:
             return f"{total/1e3:.2f}K"
     
     def _count_trainable_parameters(self) -> str:
-        """统计可训练参数量"""
+        """Count trainable parameters"""
         total = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         if total >= 1e9:
             return f"{total/1e9:.2f}B"
@@ -368,19 +368,19 @@ class SFTTrainer:
     
     def create_eval_function(self):
         """
-        创建评估函数，用于回调
+        Create evaluation function for callback
         
-        流程：
-        1. 保存 LoRA adapter
-        2. 重新加载原始模型（float16）并合并 LoRA
-        3. 保存合并后的模型
-        4. 使用 SGLang 直接推理
-        5. 计算综合分数
+        Flow:
+        1. Save LoRA adapter
+        2. Reload original model (float16) and merge LoRA
+        3. Save merged model
+        4. Use SGLang for direct inference
+        5. Compute combined score
         """
         def eval_fn(model, tokenizer, step: int):
             """
-            执行全量评估（TruthfulQA + QMSum 完整测试集）
-            使用 SGLang 直接推理（不转换 GGUF）
+            Execute full evaluation (TruthfulQA + QMSum full test set)
+            Use SGLang for direct inference (no GGUF conversion)
             """
             import gc
             from model_loader import ModelManager
@@ -388,37 +388,37 @@ class SFTTrainer:
             from inference import InferenceRunner
             from evaluator import evaluate_dataset, save_results, save_predictions, print_summary
             
-            # 评估的数据集列表
+            # Dataset list for evaluation
             eval_datasets = ["qmsum", "truthfulqa"]
             
             all_results = {}
             all_samples = {}
             
-            # 临时目录
+            # Temporary directories
             temp_adapter_dir = os.path.join(self.output_dir, f"_temp_adapter_step_{step}")
             temp_model_dir = os.path.join(self.output_dir, f"_temp_eval_step_{step}")
             os.makedirs(temp_adapter_dir, exist_ok=True)
             os.makedirs(temp_model_dir, exist_ok=True)
             
             print(f"\n{'='*60}")
-            print(f"评估步骤 {step}: 使用 SGLang 推理")
+            print(f"Evaluation step {step}: Using SGLang inference")
             print(f"{'='*60}")
             
-            # 设置模型为评估模式
+            # Set model to evaluation mode
             model.eval()
             
-            # 1. 保存 LoRA adapter
-            print(f"\n[1/3] 保存 LoRA adapter...")
+            # 1. Save LoRA adapter
+            print(f"\n[1/3] Saving LoRA adapter...")
             model.save_pretrained(temp_adapter_dir)
             tokenizer.save_pretrained(temp_adapter_dir)
-            print(f"  Adapter 已保存到: {temp_adapter_dir}")
+            print(f"  Adapter saved to: {temp_adapter_dir}")
             
-            # 2. 重新加载原始模型（float16）并合并 LoRA
-            print(f"\n[2/3] 加载原始模型并合并 LoRA...")
+            # 2. Reload original model (float16) and merge LoRA
+            print(f"\n[2/3] Loading original model and merging LoRA...")
             try:
                 from peft import PeftModel
                 
-                # 加载原始模型（float16，不量化）
+                # Load original model (float16, no quantization)
                 base_model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
                     torch_dtype=torch.float16,
@@ -426,91 +426,91 @@ class SFTTrainer:
                     trust_remote_code=True,
                 )
                 
-                # 加载并合并 LoRA
+                # Load and merge LoRA
                 peft_model = PeftModel.from_pretrained(base_model, temp_adapter_dir)
                 merged_model = peft_model.merge_and_unload()
                 
-                # 保存合并后的模型
+                # Save merged model
                 merged_model.save_pretrained(temp_model_dir, safe_serialization=True)
                 tokenizer.save_pretrained(temp_model_dir)
-                print(f"  合并后模型已保存到: {temp_model_dir}")
+                print(f"  Merged model saved to: {temp_model_dir}")
                 
-                # 释放内存
+                # Release memory
                 del base_model, peft_model, merged_model
                 gc.collect()
                 torch.cuda.empty_cache()
                 
             except Exception as e:
-                print(f"  合并失败: {e}")
+                print(f"  Merge failed: {e}")
                 raise
             
-            # 3. 使用 SGLang 直接推理合并后的模型
-            print(f"\n[3/3] 使用 SGLang 推理...")
-            print(f"  模型路径: {temp_model_dir}")
-            print(f"  使用 GPU: {self.gpu_ids}")
+            # 3. Use SGLang for direct inference on merged model
+            print(f"\n[3/3] Using SGLang inference...")
+            print(f"  Model path: {temp_model_dir}")
+            print(f"  Using GPUs: {self.gpu_ids}")
             
             try:
                 with ModelManager(
-                    model_name=temp_model_dir,  # 合并后的 HuggingFace 模型目录
+                    model_name=temp_model_dir,  # Merged HuggingFace model directory
                     gpu_ids=self.gpu_ids,
-                    tp_size=len(self.gpu_ids),  # 张量并行
+                    tp_size=len(self.gpu_ids),  # Tensor parallel
                     mem_fraction=0.7
                 ) as model_manager:
                     
-                    # 创建推理运行器
+                    # Create inference runner
                     runner = InferenceRunner(
                         engine=model_manager.engine,
                         temperature=0.0,
                         batch_size=8,
-                        backend=model_manager.backend,  # 应该是 "sglang"
+                        backend=model_manager.backend,  # Should be "sglang"
                         max_tokens=512,
                         model_path=temp_model_dir,
                         gpu_ids=self.gpu_ids
                     )
                     
-                    # 遍历每个数据集进行推理
+                    # Iterate through each dataset for inference
                     for dataset_name in eval_datasets:
                         print(f"\n{'='*60}")
-                        print(f"数据集: {dataset_name.upper()} (完整测试集)")
+                        print(f"Dataset: {dataset_name.upper()} (full test set)")
                         print(f"{'='*60}")
                         
-                        # 打印数据集信息
+                        # Print dataset info
                         dataset_info = get_dataset_info(dataset_name)
-                        print(f"任务: {dataset_info.get('task', 'N/A')}")
-                        print(f"描述: {dataset_info.get('description', 'N/A')}")
+                        print(f"Task: {dataset_info.get('task', 'N/A')}")
+                        print(f"Description: {dataset_info.get('description', 'N/A')}")
                         
-                        # 加载完整数据集
+                        # Load full dataset
                         samples = load_dataset_by_name(
                             dataset_name=dataset_name,
-                            max_samples=None  # 完整测试集
+                            max_samples=None  # Full test set
                         )
                         
                         if not samples:
-                            print(f"警告: 数据集 {dataset_name} 为空，跳过")
+                            print(f"Warning: Dataset {dataset_name} is empty, skipping")
                             continue
                         
-                        # 运行推理
-                        print(f"\n开始推理，共 {len(samples)} 个样本...")
+                        # Run inference
+                        print(f"\nStarting inference, {len(samples)} samples total...")
                         samples = runner.run(samples)
                         
-                        # 保存推理结果
+                        # Save inference results
                         all_samples[dataset_name] = samples
                 
-                # 评估阶段
+                # Evaluation phase
                 print(f"\n{'='*60}")
-                print("评估阶段")
+                print("Evaluation Phase")
                 print(f"{'='*60}")
                 
                 for dataset_name, samples in all_samples.items():
-                    print(f"\n正在评估 {dataset_name.upper()} 数据集...")
+                    print(f"\nEvaluating {dataset_name.upper()} dataset...")
                     
-                    # 评估结果
+                    # Evaluate results
                     results = evaluate_dataset(dataset_name, samples)
                     results["step"] = step
                     results["timestamp"] = datetime.now().isoformat()
                     results["model_name"] = f"{self.model_name}_step{step}"
                     
-                    # 保存结果
+                    # Save results
                     step_output_dir = os.path.join(self.output_dir, f"eval_step_{step}")
                     os.makedirs(step_output_dir, exist_ok=True)
                     
@@ -532,33 +532,33 @@ class SFTTrainer:
                     
                     all_results[dataset_name] = results
                 
-                # 打印评估摘要
+                # Print evaluation summary
                 print_summary(all_results)
                 
             finally:
-                # 清理临时文件
+                # Clean up temporary files
                 try:
                     if os.path.exists(temp_adapter_dir):
                         shutil.rmtree(temp_adapter_dir)
                     if os.path.exists(temp_model_dir):
                         shutil.rmtree(temp_model_dir)
-                    print(f"\n已清理临时文件")
+                    print(f"\nTemporary files cleaned up")
                 except:
                     pass
             
-            # 恢复训练模式
+            # Restore training mode
             model.train()
             
-            # 计算综合分数
+            # Compute combined score
             combined_score = compute_combined_score(all_results)
             
             print(f"\n{'='*60}")
-            print("综合评分")
+            print("Combined Score")
             print(f"{'='*60}")
             print(f"  QMSum ROUGE-L: {all_results.get('qmsum', {}).get('rougeL', 0):.4f}")
             print(f"  TruthfulQA Accuracy: {all_results.get('truthfulqa', {}).get('accuracy', 0):.4f}")
             print(f"  TruthfulQA Avg Max Score: {all_results.get('truthfulqa', {}).get('avg_max_score', 0):.4f}")
-            print(f"  综合分数: {combined_score:.4f}")
+            print(f"  Combined score: {combined_score:.4f}")
             print(f"{'='*60}")
             
             return all_results, combined_score
@@ -567,22 +567,22 @@ class SFTTrainer:
     
     def train(self, train_dataset):
         """
-        执行训练
+        Execute training
         
         Args:
-            train_dataset: HuggingFace Dataset对象
+            train_dataset: HuggingFace Dataset object
         """
         if self.model is None or self.tokenizer is None:
             self.load_model_and_tokenizer()
         
-        # 检查是否有 DeepSpeed 配置
+        # Check if DeepSpeed config exists
         deepspeed_config = os.environ.get("DEEPSPEED_CONFIG", None)
         
-        # 创建训练参数
+        # Create training arguments
         training_args = TrainingArguments(
             output_dir=self.output_dir,
             num_train_epochs=self.num_epochs,
-            max_steps=self.max_steps,  # -1 表示不限制
+            max_steps=self.max_steps,  # -1 means unlimited
             per_device_train_batch_size=self.batch_size,
             gradient_accumulation_steps=self.gradient_accumulation_steps,
             learning_rate=self.learning_rate,
@@ -594,32 +594,32 @@ class SFTTrainer:
             bf16=self.bf16,
             fp16=self.fp16,
             seed=self.seed,
-            dataloader_num_workers=0,  # 禁用多进程，避免与BLEURT子进程冲突
+            dataloader_num_workers=0,  # Disable multiprocessing to avoid conflicts with BLEURT subprocess
             remove_unused_columns=False,
-            report_to="none",  # 禁用wandb等
+            report_to="none",  # Disable wandb etc
             optim="adamw_torch",
             lr_scheduler_type="cosine",
             gradient_checkpointing=True,
-            max_grad_norm=1.0,  # 梯度裁剪，防止梯度爆炸
-            deepspeed=deepspeed_config,  # DeepSpeed 配置
+            max_grad_norm=1.0,  # Gradient clipping to prevent gradient explosion
+            deepspeed=deepspeed_config,  # DeepSpeed config
         )
         
-        # 数据整理器
+        # Data collator
         data_collator = DataCollatorForSeq2Seq(
             tokenizer=self.tokenizer,
             padding=True,
             return_tensors="pt",
         )
         
-        # 创建评估回调
+        # Create evaluation callback
         eval_callback = PeriodicEvalCallback(
             eval_fn=self.create_eval_function(),
             eval_steps=self.eval_steps,
             output_dir=self.output_dir,
-            tokenizer=self.tokenizer,  # 传入tokenizer
+            tokenizer=self.tokenizer,  # Pass tokenizer
         )
         
-        # 创建Trainer
+        # Create Trainer
         self.trainer = Trainer(
             model=self.model,
             args=training_args,
@@ -629,24 +629,24 @@ class SFTTrainer:
             callbacks=[eval_callback],
         )
         
-        # 开始训练
+        # Start training
         print(f"\n{'='*70}")
-        print("开始SFT训练")
+        print("Starting SFT Training")
         print(f"{'='*70}")
-        print(f"训练样本数: {len(train_dataset)}")
-        print(f"训练轮数: {self.num_epochs}")
-        print(f"有效批次大小: {self.batch_size * self.gradient_accumulation_steps * len(self.gpu_ids)}")
-        print(f"评估间隔: 每 {self.eval_steps} 步 (完整测试集)")
-        print(f"评估GPU: {self.gpu_ids}")
-        print(f"综合分数 = TruthfulQA_accuracy + QMSum_rougeL + TruthfulQA_avg_max_score")
+        print(f"Training samples: {len(train_dataset)}")
+        print(f"Epochs: {self.num_epochs}")
+        print(f"Effective batch size: {self.batch_size * self.gradient_accumulation_steps * len(self.gpu_ids)}")
+        print(f"Eval interval: Every {self.eval_steps} steps (full test set)")
+        print(f"Eval GPUs: {self.gpu_ids}")
+        print(f"Combined score = TruthfulQA_accuracy + QMSum_rougeL + TruthfulQA_avg_max_score")
         print(f"{'='*70}\n")
         
         start_time = time.time()
         
-        # 训练
+        # Train
         self.trainer.train(resume_from_checkpoint=self.resume_from_checkpoint)
         
-        # 保存最终模型
+        # Save final model
         final_model_path = os.path.join(self.output_dir, "final_model")
         self.trainer.save_model(final_model_path)
         self.tokenizer.save_pretrained(final_model_path)
@@ -654,25 +654,25 @@ class SFTTrainer:
         total_time = time.time() - start_time
         
         print(f"\n{'='*70}")
-        print("训练完成！")
+        print("Training Complete!")
         print(f"{'='*70}")
-        print(f"总耗时: {total_time/3600:.2f} 小时")
-        print(f"最终模型保存到: {final_model_path}")
-        print(f"评估历史保存到: {os.path.join(self.output_dir, 'eval_history.json')}")
-        print(f"最佳模型: step {eval_callback.best_step}, 综合分数 {eval_callback.best_score:.4f}")
+        print(f"Total time: {total_time/3600:.2f} hours")
+        print(f"Final model saved to: {final_model_path}")
+        print(f"Evaluation history saved to: {os.path.join(self.output_dir, 'eval_history.json')}")
+        print(f"Best model: step {eval_callback.best_step}, combined score {eval_callback.best_score:.4f}")
         
-        # 执行最终评估
+        # Execute final evaluation
         print(f"\n{'='*70}")
-        print("执行最终全量评估")
+        print("Executing Final Full Evaluation")
         print(f"{'='*70}")
         
         final_results, final_score = self.create_eval_function()(
             model=self.model,
             tokenizer=self.tokenizer,
-            step=-1,  # -1表示最终评估
+            step=-1,  # -1 indicates final evaluation
         )
         
-        # 保存最终评估结果
+        # Save final evaluation results
         final_eval_data = {
             "combined_score": final_score,
             "best_step": eval_callback.best_step,
@@ -684,26 +684,26 @@ class SFTTrainer:
         with open(final_eval_file, "w", encoding="utf-8") as f:
             json.dump(final_eval_data, f, ensure_ascii=False, indent=2)
         
-        print(f"\n最终评估结果已保存到: {final_eval_file}")
-        print(f"最终综合分数: {final_score:.4f}")
+        print(f"\nFinal evaluation results saved to: {final_eval_file}")
+        print(f"Final combined score: {final_score:.4f}")
         
         return final_results, final_score
     
     def save_checkpoint(self, step: int):
-        """保存检查点"""
+        """Save checkpoint"""
         if self.trainer is not None:
             checkpoint_dir = os.path.join(self.output_dir, f"checkpoint-{step}")
             self.trainer.save_model(checkpoint_dir)
             self.tokenizer.save_pretrained(checkpoint_dir)
-            print(f"检查点已保存到: {checkpoint_dir}")
+            print(f"Checkpoint saved to: {checkpoint_dir}")
 
 
 if __name__ == "__main__":
-    # 测试训练器初始化
+    # Test trainer initialization
     trainer = SFTTrainer(
         model_name="Qwen/Qwen2-0.5B-Instruct",
         output_dir="./test_output",
         gpu_ids=[0],
         use_lora=True,
     )
-    print("训练器初始化成功！")
+    print("Trainer initialized successfully!")

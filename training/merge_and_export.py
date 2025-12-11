@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-合并 LoRA adapter 与基础模型，导出完整模型
+Merge LoRA adapter with base model and export complete model
 """
 import os
 import sys
@@ -17,112 +17,112 @@ def merge_and_export(
     hub_model_id: str = None,
 ):
     """
-    合并 LoRA adapter 并导出完整模型
+    Merge LoRA adapter and export complete model
     
     Args:
-        base_model_name: 基础模型名称 (如 Qwen/Qwen3-0.6B)
-        adapter_path: LoRA adapter 路径
-        output_path: 输出路径
-        push_to_hub: 是否推送到 HuggingFace Hub
-        hub_model_id: HuggingFace Hub 模型 ID
+        base_model_name: Base model name (e.g. Qwen/Qwen3-0.6B)
+        adapter_path: LoRA adapter path
+        output_path: Output path
+        push_to_hub: Whether to push to HuggingFace Hub
+        hub_model_id: HuggingFace Hub model ID
     """
     print(f"\n{'='*60}")
-    print("合并 LoRA adapter 并导出模型")
+    print("Merge LoRA adapter and export model")
     print(f"{'='*60}")
-    print(f"基础模型: {base_model_name}")
-    print(f"Adapter路径: {adapter_path}")
-    print(f"输出路径: {output_path}")
+    print(f"Base model: {base_model_name}")
+    print(f"Adapter path: {adapter_path}")
+    print(f"Output path: {output_path}")
     print(f"{'='*60}\n")
     
-    # 1. 加载基础模型
-    print("[1/4] 加载基础模型...")
+    # 1. Load base model
+    print("[1/4] Loading base model...")
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_name,
         torch_dtype=torch.float16,
         device_map="auto",
         trust_remote_code=True,
     )
-    print(f"  基础模型参数量: {base_model.num_parameters() / 1e6:.2f}M")
+    print(f"  Base model parameters: {base_model.num_parameters() / 1e6:.2f}M")
     
-    # 2. 加载 tokenizer
-    print("\n[2/4] 加载 tokenizer...")
+    # 2. Load tokenizer
+    print("\n[2/4] Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(
         base_model_name,
         trust_remote_code=True,
     )
     
-    # 3. 加载并合并 LoRA adapter
-    print("\n[3/4] 加载并合并 LoRA adapter...")
+    # 3. Load and merge LoRA adapter
+    print("\n[3/4] Loading and merging LoRA adapter...")
     model = PeftModel.from_pretrained(base_model, adapter_path)
     model = model.merge_and_unload()
-    print(f"  合并后模型参数量: {model.num_parameters() / 1e6:.2f}M")
+    print(f"  Merged model parameters: {model.num_parameters() / 1e6:.2f}M")
     
-    # 4. 保存合并后的模型
-    print(f"\n[4/4] 保存合并后的模型到: {output_path}")
+    # 4. Save merged model
+    print(f"\n[4/4] Saving merged model to: {output_path}")
     os.makedirs(output_path, exist_ok=True)
     model.save_pretrained(output_path, safe_serialization=True)
     tokenizer.save_pretrained(output_path)
     
-    # 计算模型大小
+    # Calculate model size
     total_size = 0
     for f in os.listdir(output_path):
         if f.endswith('.safetensors') or f.endswith('.bin'):
             total_size += os.path.getsize(os.path.join(output_path, f))
-    print(f"  模型大小: {total_size / 1e9:.2f} GB")
+    print(f"  Model size: {total_size / 1e9:.2f} GB")
     
-    # 列出保存的文件
-    print(f"\n保存的文件:")
+    # List saved files
+    print(f"\nSaved files:")
     for f in sorted(os.listdir(output_path)):
         fpath = os.path.join(output_path, f)
         if os.path.isfile(fpath):
             size = os.path.getsize(fpath)
             print(f"  {f}: {size / 1e6:.2f} MB")
     
-    # 推送到 Hub
+    # Push to Hub
     if push_to_hub and hub_model_id:
-        print(f"\n推送到 HuggingFace Hub: {hub_model_id}")
+        print(f"\nPushing to HuggingFace Hub: {hub_model_id}")
         model.push_to_hub(hub_model_id)
         tokenizer.push_to_hub(hub_model_id)
-        print("推送完成!")
+        print("Push complete!")
     
     print(f"\n{'='*60}")
-    print("✅ 模型导出完成!")
-    print(f"模型路径: {output_path}")
+    print("✅ Model export complete!")
+    print(f"Model path: {output_path}")
     print(f"{'='*60}\n")
     
     return output_path
 
 
 def main():
-    parser = argparse.ArgumentParser(description="合并 LoRA adapter 并导出模型")
+    parser = argparse.ArgumentParser(description="Merge LoRA adapter and export model")
     parser.add_argument(
         "--base_model",
         type=str,
         default="Qwen/Qwen3-0.6B",
-        help="基础模型名称",
+        help="Base model name",
     )
     parser.add_argument(
         "--adapter_path",
         type=str,
         required=True,
-        help="LoRA adapter 路径",
+        help="LoRA adapter path",
     )
     parser.add_argument(
         "--output_path",
         type=str,
         default="./merged_model",
-        help="输出路径",
+        help="Output path",
     )
     parser.add_argument(
         "--push_to_hub",
         action="store_true",
-        help="是否推送到 HuggingFace Hub",
+        help="Whether to push to HuggingFace Hub",
     )
     parser.add_argument(
         "--hub_model_id",
         type=str,
         default=None,
-        help="HuggingFace Hub 模型 ID",
+        help="HuggingFace Hub model ID",
     )
     
     args = parser.parse_args()
@@ -138,4 +138,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
