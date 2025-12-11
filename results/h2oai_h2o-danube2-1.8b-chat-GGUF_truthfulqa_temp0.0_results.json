@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -1.0618161003731164,
+  "accuracy": 0.5006119951040392,
+  "correct_count": 409,
+  "main_metric": "accuracy",
+  "main_score": 0.5006119951040392,
+  "model_name": "h2oai/h2o-danube2-1.8b-chat-GGUF",
+  "timestamp": "2025-12-10T23:58:34.051387"
+}

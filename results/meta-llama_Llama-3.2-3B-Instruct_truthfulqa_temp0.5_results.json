@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -0.8563590139661308,
+  "accuracy": 0.5238678090575275,
+  "correct_count": 428,
+  "main_metric": "accuracy",
+  "main_score": 0.5238678090575275,
+  "model_name": "meta-llama/Llama-3.2-3B-Instruct",
+  "timestamp": "2025-12-04T14:00:10.877519"
+}

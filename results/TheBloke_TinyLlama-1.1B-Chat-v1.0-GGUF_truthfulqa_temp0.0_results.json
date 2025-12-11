@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -0.8620562941118656,
+  "accuracy": 0.47613219094247244,
+  "correct_count": 389,
+  "main_metric": "accuracy",
+  "main_score": 0.47613219094247244,
+  "model_name": "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+  "timestamp": "2025-12-10T23:45:22.940386"
+}

@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -1.487125830667839,
+  "accuracy": 0.39412484700122397,
+  "correct_count": 322,
+  "main_metric": "accuracy",
+  "main_score": 0.39412484700122397,
+  "model_name": "unsloth/Phi-4-mini-reasoning",
+  "timestamp": "2025-12-04T22:13:17.195302"
+}

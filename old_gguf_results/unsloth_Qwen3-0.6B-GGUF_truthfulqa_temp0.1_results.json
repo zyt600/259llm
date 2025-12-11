@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -0.8277188911486868,
+  "accuracy": 0.6144430844553244,
+  "correct_count": 502,
+  "main_metric": "accuracy",
+  "main_score": 0.6144430844553244,
+  "model_name": "unsloth/Qwen3-0.6B-GGUF",
+  "timestamp": "2025-12-08T09:11:39.862993"
+}

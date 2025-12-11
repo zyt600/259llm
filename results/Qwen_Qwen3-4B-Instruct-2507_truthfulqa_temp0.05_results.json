@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -0.7928504797201399,
+  "accuracy": 0.6119951040391677,
+  "correct_count": 500,
+  "main_metric": "accuracy",
+  "main_score": 0.6119951040391677,
+  "model_name": "Qwen/Qwen3-4B-Instruct-2507",
+  "timestamp": "2025-12-08T03:58:45.929942"
+}

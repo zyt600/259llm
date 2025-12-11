@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -1.0595871647557693,
+  "accuracy": 0.4186046511627907,
+  "correct_count": 342,
+  "main_metric": "accuracy",
+  "main_score": 0.4186046511627907,
+  "model_name": "google/gemma-3-270m-it",
+  "timestamp": "2025-12-10T20:05:25.426501"
+}

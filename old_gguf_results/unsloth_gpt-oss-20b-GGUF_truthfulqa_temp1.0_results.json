@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -1.2041644862917966,
+  "accuracy": 0.5165238678090576,
+  "correct_count": 422,
+  "main_metric": "accuracy",
+  "main_score": 0.5165238678090576,
+  "model_name": "unsloth/gpt-oss-20b-GGUF",
+  "timestamp": "2025-12-08T00:30:11.673168"
+}

@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -0.8426334713756665,
+  "accuracy": 0.5813953488372093,
+  "correct_count": 475,
+  "main_metric": "accuracy",
+  "main_score": 0.5813953488372093,
+  "model_name": "/root/newtest/training/training_output2/qwen3-0.6b-sft-q8_0.gguf",
+  "timestamp": "2025-12-11T07:12:01.687820"
+}

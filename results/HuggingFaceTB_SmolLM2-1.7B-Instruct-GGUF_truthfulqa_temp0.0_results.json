@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -1.4383674212606028,
+  "accuracy": 0.408812729498164,
+  "correct_count": 334,
+  "main_metric": "accuracy",
+  "main_score": 0.408812729498164,
+  "model_name": "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
+  "timestamp": "2025-12-11T00:08:19.360963"
+}

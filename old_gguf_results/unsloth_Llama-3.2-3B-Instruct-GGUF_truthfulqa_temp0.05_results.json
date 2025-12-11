@@ -1,0 +1,11 @@
+{
+  "dataset": "TruthfulQA",
+  "num_samples": 817,
+  "avg_max_score": -0.8262781297726468,
+  "accuracy": 0.6156670746634026,
+  "correct_count": 503,
+  "main_metric": "accuracy",
+  "main_score": 0.6156670746634026,
+  "model_name": "unsloth/Llama-3.2-3B-Instruct-GGUF",
+  "timestamp": "2025-12-08T10:12:26.175204"
+}
